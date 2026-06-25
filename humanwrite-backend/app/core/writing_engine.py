@@ -78,6 +78,14 @@ Tiru irama kalimat, pilihan kata, dan alur narasinya.
   dengan observasi singkat (5-10 kata) — ini penting.
 - Contoh variasi: "Fenomena ini mencerminkan tren global. 
   Menarik, bukan?" atau "Data menunjukkan korelasi positif. Signifikan."
+- BURSTINESS WAJIB: setiap paragraf harus punya
+  minimal 1 kalimat sangat pendek (3-6 kata) dan
+  1 kalimat panjang (20+ kata). Contoh:
+  "Temuannya signifikan. [pendek] Analisis mendalam 
+  terhadap data longitudinal selama lima tahun 
+  menunjukkan korelasi yang konsisten antara variabel 
+  independen dan hasil yang diamati. [panjang] 
+  Patut dicermati. [pendek]"
 """
     elif style_mode == "profesional":
         register_rules = """
@@ -90,6 +98,9 @@ Tiru irama kalimat, pilihan kata, dan alur narasinya.
   dengan pernyataan pendek yang tegas (3-6 kata).
 - Contoh: "Hasilnya signifikan. Namun perlu analisis lebih lanjut 
   sebelum keputusan diambil."
+- BURSTINESS WAJIB: mix kalimat tegas pendek (3-6 kata)
+  dengan kalimat informatif panjang (18+ kata).
+  Jangan semua kalimat punya panjang seragam.
 """
     elif style_mode == "kreatif":
         register_rules = """
@@ -113,6 +124,10 @@ Tiru irama kalimat, pilihan kata, dan alur narasinya.
   dengan kalimat pendek yang tegas.
 - Contoh: "Situasinya memang rumit. Tapi bukan berarti tidak bisa 
   diselesaikan — asalkan ada kemauan dari semua pihak."
+- BURSTINESS WAJIB: setiap paragraf harus mengandung
+  kalimat sangat pendek (3-5 kata) dan kalimat 
+  panjang yang mengalir (20+ kata). Variasi ini 
+  membuat tulisan terasa hidup dan natural.
 """
 
     return f"""Kamu penulis manusia, bukan AI. Tugas kamu: tulis ulang draf ini
@@ -337,10 +352,15 @@ def _inject_short_sentences(text: str, lang: str, style_mode: str = "populer") -
                    "Suddenly.", "Indeed."]
         },
         "populer": {
-            "id": ["Parah.", "Serius.", "Gila sih.", 
-                   "Capek banget.", "Ribet.", "Makanya."],
-            "en": ["Seriously.", "Wild.", "For real.", 
-                   "Crazy.", "No joke."]
+            "id": [
+                "Menarik.", "Sungguh.", "Wajar saja.",
+                "Memang begitu.", "Cukup rumit.", "Tentu.",
+                "Tidak mudah.", "Perlu diakui."
+            ],
+            "en": [
+                "Interesting.", "Indeed.", "Fair enough.",
+                "That said.", "Not easy.", "Worth noting."
+            ]
         }
     }
     lang_key = "id" if lang in ("id", "mixed") else "en"
@@ -520,13 +540,16 @@ async def apply_style_stream(draft: str, style: StyleProfile) -> AsyncGenerator[
     
     # ── PASS 1: Full rewrite ──────────────────────────────────
     user_msg = (
-        f"Rewrite this draft to sound like a natural human wrote it. "
-        f"Keep exactly {paragraph_count} paragraphs:\n\n{clean_draft}"
+        f"Tulis ulang draf berikut agar terdengar natural, "
+        f"ditulis oleh manusia sungguhan. "
+        f"Ikuti register dan gaya yang telah ditentukan. "
+        f"Output HARUS persis {paragraph_count} paragraf.\n\n"
+        f"{clean_draft}"
     )
     
     async with agent.run_stream(
         user_msg,
-        model_settings={"temperature": 1.3}
+        model_settings={"temperature": 1.4}
     ) as result:
         full_text = ""
         final_result = None
@@ -578,11 +601,14 @@ async def apply_style(draft: str, style: StyleProfile) -> ProcessedText:
     )
     
     user_msg = (
-        f"Rewrite this draft to sound like a natural human wrote it. "
-        f"Keep exactly {paragraph_count} paragraphs:\n\n{clean_draft}"
+        f"Tulis ulang draf berikut agar terdengar natural, "
+        f"ditulis oleh manusia sungguhan. "
+        f"Ikuti register dan gaya yang telah ditentukan. "
+        f"Output HARUS persis {paragraph_count} paragraf.\n\n"
+        f"{clean_draft}"
     )
     
-    result = await agent.run(user_msg, model_settings={"temperature": 1.3})
+    result = await agent.run(user_msg, model_settings={"temperature": 1.4})
     text = result.output.final_text
     
     text = _apply_post_processing(text, style.language, style_mode)
