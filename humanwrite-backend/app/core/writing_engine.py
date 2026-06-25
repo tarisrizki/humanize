@@ -430,14 +430,14 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
             replacements = [
                 (r"(?i)\bsecara keseluruhan\s*,?\s*", "pada akhirnya,"),
                 (r"(?i)\bdapat disimpulkan bahwa\b", "ternyata"),
-                (r"(?i)\bhal ini\b", "ini"),
                 (r"(?i)\btersebut\b", "itu"),
                 (r"(?i)\bsangat\b", "amat"),
                 (r"(?i)\bmenimbulkan\b", "melahirkan"),
                 (r"(?i)\bsehingga\b", "hingga"),
             ]
             conversational_injects = [
-                "Dan ", "Tapi ", "Tiba-tiba, ", "Sayangnya, "
+                "Dan ", "Tapi ", "Meski begitu, ", "Anehnya, ",
+                "Yang jelas, ", "Sayangnya, "
             ]
         else:  # populer — conversational tapi TETAP EYD
             replacements = [
@@ -448,7 +448,6 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
                 (r"(?i)\boleh karena itu\s*,?\s*", "karena itu,"),
                 (r"(?i)\bdapat disimpulkan bahwa\b", "bisa dikatakan bahwa"),
                 (r"(?i)\bsangat penting\b", "sangat krusial"),
-                (r"(?i)\bhal ini\b", "ini"),
                 (r"(?i)\btersebut\b", "itu"),
                 (r"(?i)\bmenimbulkan\b", "menimbulkan"),
                 (r"(?i)\bnamun demikian\s*,?\s*", "namun,"),
@@ -498,10 +497,17 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
                     # Skip jika kalimat sudah dimulai connector/transisi
                     already_has_connector = any(
                         sent_lower.startswith(c.lower()) 
-                        for c in ["dan ", "tapi ", "nah,", "memang,", 
-                                  "tentu", "perlu", "menarik", "di sisi",
-                                  "lebih jauh", "karena itu", "dengan begitu",
-                                  "selain", "namun", "bahkan", "justru"]
+                        for c in [
+                            "dan ", "tapi ", "nah,", "memang,", "tentu",
+                            "perlu", "menarik", "di sisi", "lebih jauh",
+                            "karena itu", "dengan begitu", "selain", "namun",
+                            "bahkan", "justru", "oleh karena", "dengan demikian",
+                            "sementara", "adapun", "terkait", "di samping",
+                            "pada akhirnya", "singkat kata", "intinya",
+                            "buktinya", "ternyata", "maka,", "tiba-tiba",
+                            "sayangnya", "secara umum", "dalam konteks",
+                            "berdasarkan", "di samping itu",
+                        ]
                     )
                     if not already_has_connector:
                         inj = random.choice(conversational_injects)
