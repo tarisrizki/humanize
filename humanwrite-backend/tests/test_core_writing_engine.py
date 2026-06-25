@@ -29,9 +29,7 @@ async def test_apply_style(mock_agent_class):
     mock_agent_class.return_value = mock_agent_instance
     
     mock_result = MagicMock()
-    mock_result.output.final_text = "Rewritten text"
-    mock_result.output.voice_match_score = 90.0
-    mock_result.output.changes_made = ["Made it better"]
+    mock_result.output = "Rewritten text"
     
     async def async_run(*args, **kwargs):
         return mock_result
@@ -42,4 +40,4 @@ async def test_apply_style(mock_agent_class):
     result = await apply_style("Original draft", profile)
     
     assert result.final_text == "Rewritten text"
-    assert result.voice_match_score == 90.0
+    assert len(result.changes_made) > 0

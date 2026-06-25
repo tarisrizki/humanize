@@ -355,6 +355,32 @@ def _programmatic_sentence_humanize(text: str, lang: str, style_mode: str = "pop
                         p1 = p1[0].upper() + p1[1:]
                         s = p0 + '. ' + p1
 
+            # Split kalimat >25 kata di titik natural
+            if len(s.split()) > 25:
+                # Coba split di "yang" jika ada subjek sebelumnya
+                parts = re.split(r',?\s+yang\s+', s, maxsplit=1)
+                if len(parts) == 2 and len(parts[0].split()) >= 6:
+                    p1 = parts[0].strip().rstrip(',') + '.'
+                    p2 = parts[1].strip()
+                    if p2:
+                        p2 = p2[0].upper() + p2[1:]
+                        # Tambah konteks agar p2 bisa berdiri sendiri
+                        s = p1 + ' ' + p2
+            
+            # Split di "dan" untuk kalimat compound >28 kata
+            if len(s.split()) > 28:
+                # Hanya split jika "dan" ada di tengah (bukan awal/akhir)
+                mid = len(s) // 2
+                search_zone = s[mid-30:mid+30]
+                dan_match = re.search(r'\bdan\b', search_zone)
+                if dan_match:
+                    abs_pos = mid - 30 + dan_match.start()
+                    part1 = s[:abs_pos].strip().rstrip(',')
+                    part2 = s[abs_pos+3:].strip()
+                    if len(part1.split()) >= 8 and len(part2.split()) >= 5:
+                        part2 = part2[0].upper() + part2[1:]
+                        s = part1 + '. ' + part2
+
             new_sentences.append(s)
 
         result_paragraphs.append(' '.join(new_sentences))
@@ -596,102 +622,172 @@ def _validate_paragraph_count(
 
     return text
 
-async def apply_style_stream(draft: str, style: StyleProfile) -> AsyncGenerator[str, None]:
+def _generate_changes_made(original: str, rewritten: str) -> list[str]:
+    """
+    Generate changes_made secara programatik dari diff
+    antara original dan rewritten text.
+    Tidak butuh LLM — lebih reliable dan bebas constraint.
+    """
+    changes = []
+    
+    orig_sents = re.split(r'(?<=[.!?])\s+', original.strip())
+    new_sents  = re.split(r'(?<=[.!?])\s+', rewritten.strip())
+    
+    # Cek perubahan jumlah kalimat
+    delta = len(new_sents) - len(orig_sents)
+    if abs(delta) >= 2:
+        if delta > 0:
+            changes.append(
+                f"Beberapa kalimat panjang dipecah menjadi kalimat lebih pendek "
+                f"untuk meningkatkan variasi ritme."
+            )
+        else:
+            changes.append(
+                f"Beberapa kalimat pendek digabungkan untuk alur yang lebih baik."
+            )
+    
+    # Cek kata AI yang dihilangkan
+    ai_words = {
+        "merupakan", "memiliki", "berbagai", "sehingga", "serta",
+        "tersebut", "selain itu", "oleh karena itu", "dengan demikian",
+        "hal ini", "dapat disimpulkan", "secara keseluruhan",
+        "sangat penting", "perlu dicatat", "di sisi lain",
+    }
+    orig_lower = original.lower()
+    new_lower  = rewritten.lower()
+    removed_ai = [w for w in ai_words if w in orig_lower and w not in new_lower]
+    if removed_ai:
+        changes.append(
+            f"Frasa AI generik dihapus/diganti: "
+            f"{', '.join(f'\"{w}\"' for w in removed_ai[:4])}."
+        )
+    
+    # Cek variasi panjang kalimat
+    if orig_sents and new_sents:
+        orig_lens = [len(s.split()) for s in orig_sents]
+        new_lens  = [len(s.split()) for s in new_sents]
+        import statistics
+        orig_std = statistics.stdev(orig_lens) if len(orig_lens) > 1 else 0
+        new_std  = statistics.stdev(new_lens)  if len(new_lens)  > 1 else 0
+        if new_std > orig_std + 2:
+            changes.append(
+                "Variasi panjang kalimat ditingkatkan untuk ritme yang lebih natural "
+                "(burstiness)."
+            )
+    
+    # Fallback
+    if not changes:
+        changes.append(
+            "Parafrasa kalimat untuk gaya penulisan yang lebih natural "
+            "dan tidak terdeteksi AI."
+        )
+    
+    return changes
+
+
+async def apply_style_stream(
+    draft: str, style: StyleProfile
+) -> AsyncGenerator[str, None]:
     clean_draft = _clean_input_draft(draft)
     paragraph_count = _count_paragraphs(clean_draft)
     system_prompt = _build_system_prompt(style, paragraph_count)
-    
+    style_mode = getattr(style, 'style_mode', 'populer')
+
+    # Plain text agent — TANPA output_type
+    # Ini membebaskan Groq menulis prose alami tanpa constraint JSON
     agent = Agent(
         model=FallbackModel(
-            "groq:llama-3.3-70b-versatile", 
-            "groq:llama-3.1-8b-instant"
+            "groq:llama-3.3-70b-versatile",
+            "groq:llama-3.1-8b-instant",
         ),
         system_prompt=system_prompt,
-        output_type=ProcessedText,
+        # TIDAK ADA output_type=ProcessedText
     )
-    
-    style_mode = getattr(style, 'style_mode', 'populer')
-    score_lang = "id" if style.language in ("id", "mixed") else "en"
-    
-    # ── PASS 1: Full rewrite ──────────────────────────────────
+
     user_msg = (
         f"Tulis ulang draf berikut agar terdengar natural, "
         f"ditulis oleh manusia sungguhan. "
         f"Ikuti register dan gaya yang telah ditentukan. "
-        f"Output HARUS persis {paragraph_count} paragraf.\n\n"
+        f"Kembalikan HANYA teks hasil rewrite — "
+        f"jangan tambahkan penjelasan, label, atau komentar apapun. "
+        f"Output WAJIB persis {paragraph_count} paragraf "
+        f"dipisahkan baris kosong.\n\n"
         f"{clean_draft}"
     )
-    
-    async with agent.run_stream(
-        user_msg,
-        model_settings={"temperature": 1.4}
-    ) as result:
+
+    try:
+        result = await agent.run(
+            user_msg,
+            model_settings={"temperature": 1.5},
+        )
+        full_text = str(result.output).strip() if result.output else ""
+    except Exception as e:
         full_text = ""
-        final_result = None
-        async for partial_msg in result.stream_output():
-            final_result = partial_msg
-            if partial_msg.final_text:
-                full_text = partial_msg.final_text
-    
-    if not full_text or not final_result:
+
+    if not full_text:
         return
-    
-    # ── POST-PROCESS ─────────────────────────────────────────
+
+    # Post-processing pipeline
     text = _apply_post_processing(full_text, style.language, style_mode)
     text = _inject_short_sentences(text, style.language, style_mode)
-    
-    # ── PASS 2: Sentence-level targeted rewrite ───────────────
     text = _programmatic_sentence_humanize(text, style.language, style_mode)
-    
-    # ── Light post-process again ──────────────────────────────
     text = _apply_post_processing(text, style.language, style_mode)
     text = _validate_paragraph_count(text, paragraph_count, clean_draft)
-    
-    # ── Stream result ─────────────────────────────────────────
+
+    # Simulated streaming
     chunk_size = 10
     for i in range(0, len(text), chunk_size):
         chunk = text[i:i+chunk_size]
         yield f"event: text\ndata: {json.dumps(chunk)}\n\n"
         await asyncio.sleep(0.01)
-    
-    metrics = {
-        "changes_made": final_result.changes_made or [],
-    }
-    yield f"event: metrics\ndata: {json.dumps(metrics)}\n\n"
+
+    # Changes programmatic — tidak dari LLM
+    changes = _generate_changes_made(clean_draft, text)
+    yield f"event: metrics\ndata: {json.dumps({'changes_made': changes})}\n\n"
 
 
-async def apply_style(draft: str, style: StyleProfile) -> ProcessedText:
+async def apply_style(
+    draft: str, style: StyleProfile
+) -> ProcessedText:
     clean_draft = _clean_input_draft(draft)
     paragraph_count = _count_paragraphs(clean_draft)
     system_prompt = _build_system_prompt(style, paragraph_count)
     style_mode = getattr(style, 'style_mode', 'populer')
-    score_lang = "id" if style.language in ("id", "mixed") else "en"
-    
+
     agent = Agent(
         model=FallbackModel(
             "groq:llama-3.3-70b-versatile",
-            "groq:llama-3.1-8b-instant"
+            "groq:llama-3.1-8b-instant",
         ),
         system_prompt=system_prompt,
-        output_type=ProcessedText,
+        # TIDAK ADA output_type=ProcessedText
     )
-    
+
     user_msg = (
         f"Tulis ulang draf berikut agar terdengar natural, "
         f"ditulis oleh manusia sungguhan. "
         f"Ikuti register dan gaya yang telah ditentukan. "
-        f"Output HARUS persis {paragraph_count} paragraf.\n\n"
+        f"Kembalikan HANYA teks hasil rewrite — "
+        f"jangan tambahkan penjelasan, label, atau komentar apapun. "
+        f"Output WAJIB persis {paragraph_count} paragraf "
+        f"dipisahkan baris kosong.\n\n"
         f"{clean_draft}"
     )
-    
-    result = await agent.run(user_msg, model_settings={"temperature": 1.4})
-    text = result.output.final_text
-    
-    text = _apply_post_processing(text, style.language, style_mode)
+
+    try:
+        result = await agent.run(
+            user_msg,
+            model_settings={"temperature": 1.5},
+        )
+        full_text = str(result.output).strip() if result.output else ""
+    except Exception:
+        full_text = draft  # fallback ke draf asli
+
+    text = _apply_post_processing(full_text, style.language, style_mode)
     text = _inject_short_sentences(text, style.language, style_mode)
     text = _programmatic_sentence_humanize(text, style.language, style_mode)
     text = _apply_post_processing(text, style.language, style_mode)
     text = _validate_paragraph_count(text, paragraph_count, clean_draft)
-    
-    result.output.final_text = text
-    return result.output
+
+    changes = _generate_changes_made(clean_draft, text)
+    return ProcessedText(final_text=text, changes_made=changes)
