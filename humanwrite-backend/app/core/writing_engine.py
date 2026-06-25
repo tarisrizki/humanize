@@ -198,8 +198,8 @@ def _programmatic_sentence_humanize(text: str, lang: str) -> str:
         (r'^Dapat disimpulkan bahwa ', 'Intinya, '),
         (r'^Dapat diketahui bahwa ', 'Yang jelas, '),
         (r'^Dapat dilihat bahwa ', 'Terlihat bahwa '),
-        (r'^Perlu diketahui bahwa ', 'Perlu tahu nih, '),
-        (r'^Perlu dicatat bahwa ', 'Yang perlu dicatat, '),
+        (r'^Perlu diketahui bahwa ', 'Perlu diketahui bahwa '),
+        (r'^Perlu dicatat bahwa ', 'Perlu dicatat, '),
         (r'^Selain itu, ', 'Dan '),
         (r'^Selain itu ', 'Dan '),
         (r'^Dengan demikian, ', 'Makanya, '),
@@ -221,10 +221,14 @@ def _programmatic_sentence_humanize(text: str, lang: str) -> str:
 
     # Word-level replacements (applied after opener rules)
     word_rules = [
-        (r'\btersebut\b', 'itu'),
-        (r'\bmenunjukkan bahwa\b', 'membuktikan'),
-        (r'\bdapat disimpulkan\b', 'bisa dibilang'),
-        (r'\bsangat penting\b', 'krusial'),
+        # "tersebut" sering bisa diganti "ini/itu" tanpa merusak EYD
+        (r'\btersebut\b', 'ini'),
+        # Frasa AI yang bisa diganti tanpa merusak struktur
+        (r'\bmenunjukkan bahwa\b', 'mengindikasikan bahwa'),
+        (r'\bdapat disimpulkan\b', 'dapat dikatakan'),
+        # HAPUS: sangat penting → krusial (krusial juga terasa AI)
+        # Ganti dengan yang lebih natural:
+        (r'\bsangat penting untuk\b', 'penting untuk'),
     ]
 
     paragraphs = text.split('\n')
@@ -343,36 +347,61 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
         text = re.sub(p, '', text, flags=re.IGNORECASE)
         
     if lang in ("id", "mixed"):
-        # Replace AI-typical Indonesian words/phrases
-        replacements = [
-            (r"(?i)\bsecara keseluruhan\b", "singkat cerita"),
-            (r"(?i)\bselain itu\b", "satu hal lagi"),
-            (r"(?i)\bpenting untuk diingat\b", "jangan lupa"),
-            (r"(?i)\bkesimpulannya\b", "intinya"),
-            (r"(?i)\boleh karena itu\b", "makanya"),
-            (r"(?i)\bdi sisi lain\b", "tapi kalau dilihat dari sisi lain"),
-            (r"(?i)\bperlu dicatat\b", "yang perlu digarisbawahi"),
-            (r"(?i)\bdapat disimpulkan\b", "bisa dibilang"),
-            (r"(?i)\bsangat penting\b", "krusial"),
-            (r"(?i)\bmerupakan\b", "itu"),
-            (r"(?i)\badalah\b", "itu"),
-            (r"(?i)\bmemiliki\b", "punya"),
-            (r"(?i)\bberbagai macam\b", "banyak"),
-            (r"(?i)\bberbagai\b", "banyak"),
-            (r"(?i)\bmelalui\b", "lewat"),
-            (r"(?i)\bdalam hal ini\b", "soal ini"),
-            (r"(?i)\bhal ini\b", "ini"),
-            (r"(?i)\bnamun demikian\b", "tapi ya"),
-            (r"(?i)\bdengan demikian\b", "jadi"),
-            (r"(?i)\bberdasarkan\b", "menurut"),
-            (r"(?i)\bsebagaimana\b", "seperti"),
-            (r"(?i)\bterhadap\b", "pada"),
-            (r"(?i)\bsehingga\b", "jadi"),
-            (r"(?i)\bsekaligus\b", "dan juga"),
-            (r"(?i)\bmeliputi\b", "termasuk"),
-            (r"(?i)\bmenimbulkan\b", "bikin"),
-        ]
-        conversational_injects = ["Dan ", "Tapi ", "Nah, ", "Soalnya, ", "Yang jelas, "]
+        if style_mode in ("akademik", "profesional"):
+            # Mode formal: ganti hanya frasa AI yang paling generik,
+            # JANGAN ganti kata baku yang membentuk kalimat benar
+            replacements = [
+                # Frasa AI opener yang bisa diganti tanpa melanggar EYD
+                (r"(?i)\bsecara keseluruhan,?\b", "secara umum,"),
+                (r"(?i)\bdapat disimpulkan bahwa\b", "dapat dikatakan bahwa"),
+                (r"(?i)\bperlu dicatat bahwa\b", "perlu diperhatikan bahwa"),
+                (r"(?i)\bdi sisi lain,?\b", "sebaliknya,"),
+                (r"(?i)\bsangat penting\b", "krusial"),
+                (r"(?i)\bhal ini menunjukkan bahwa\b", "ini mengindikasikan bahwa"),
+                (r"(?i)\bhal ini membuktikan\b", "ini membuktikan"),
+                (r"(?i)\btersebut\b", "ini"),
+                # JANGAN ganti: adalah, merupakan, memiliki, berdasarkan,
+                # terhadap, sehingga — semua itu kata baku yang benar
+            ]
+            conversational_injects = [
+                "Perlu dicatat, ", "Menariknya, ", 
+                "Di sisi lain, ", "Lebih jauh, "
+            ]
+        elif style_mode == "kreatif":
+            replacements = [
+                (r"(?i)\bsecara keseluruhan,?\b", "pada akhirnya,"),
+                (r"(?i)\bdapat disimpulkan bahwa\b", "ternyata"),
+                (r"(?i)\bhal ini\b", "ini"),
+                (r"(?i)\btersebut\b", "itu"),
+                (r"(?i)\bsangat\b", "amat"),
+                (r"(?i)\bmenimbulkan\b", "melahirkan"),
+                (r"(?i)\bsehingga\b", "hingga"),
+            ]
+            conversational_injects = [
+                "Dan ", "Tapi ", "Tiba-tiba, ", "Sayangnya, "
+            ]
+        else:  # populer — conversational tapi TETAP EYD
+            replacements = [
+                # Ganti frasa AI dengan frasa natural EYD (bukan slang)
+                (r"(?i)\bsecara keseluruhan,?\b", "singkat kata,"),
+                (r"(?i)\bselain itu,?\b", "selain itu juga,"),
+                (r"(?i)\bkesimpulannya,?\b", "intinya,"),
+                (r"(?i)\boleh karena itu,?\b", "karena itu,"),
+                (r"(?i)\bdapat disimpulkan bahwa\b", "bisa dikatakan bahwa"),
+                (r"(?i)\bsangat penting\b", "sangat krusial"),
+                (r"(?i)\bhal ini\b", "ini"),
+                (r"(?i)\btersebut\b", "itu"),
+                (r"(?i)\bmenimbulkan\b", "menimbulkan"),
+                (r"(?i)\bnamun demikian,?\b", "namun,"),
+                (r"(?i)\bdengan demikian,?\b", "dengan begitu,"),
+                # HAPUS: adalah→itu, merupakan→itu (melanggar EYD)
+                # HAPUS: terhadap→pada (tidak selalu benar)
+                # HAPUS: berbagai→macam-macam (tidak selalu natural)
+                (r"(?i)\bberbagai macam\b", "berbagai"),  # hanya ini yang aman
+            ]
+            conversational_injects = [
+                "Dan ", "Tapi ", "Nah, ", "Memang, ", "Tentu saja, "
+            ]
     else:
         replacements = [
             (r"(?i)\bin conclusion\b", "to wrap up"),
