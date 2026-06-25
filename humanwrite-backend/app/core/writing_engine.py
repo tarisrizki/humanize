@@ -362,6 +362,15 @@ def _inject_short_sentences(text: str, lang: str, style_mode: str = "populer") -
     return '\n'.join(result)
 
 
+def _replace_preserve_case(text: str, pattern: str, replacement: str) -> str:
+    """Replace pattern tapi preserve kapitalisasi kata pertama."""
+    def _replacer(match):
+        orig = match.group(0)
+        if orig and orig[0].isupper():
+            return replacement[0].upper() + replacement[1:]
+        return replacement
+    return re.sub(pattern, _replacer, text, flags=re.IGNORECASE)
+
 def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") -> str:
     """Apply aggressive post-processing to break AI detection patterns."""
     if not text:
@@ -382,10 +391,10 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
             # JANGAN ganti kata baku yang membentuk kalimat benar
             replacements = [
                 # Frasa AI opener yang bisa diganti tanpa melanggar EYD
-                (r"(?i)\bsecara keseluruhan,?\b", "secara umum,"),
+                (r"(?i)\bsecara keseluruhan\s*,?\s*", "secara umum,"),
                 (r"(?i)\bdapat disimpulkan bahwa\b", "dapat dikatakan bahwa"),
                 (r"(?i)\bperlu dicatat bahwa\b", "perlu diperhatikan bahwa"),
-                (r"(?i)\bdi sisi lain,?\b", "sebaliknya,"),
+                (r"(?i)\bdi sisi lain\s*,?\s*", "sebaliknya,"),
                 (r"(?i)\bsangat penting\b", "krusial"),
                 (r"(?i)\bhal ini menunjukkan bahwa\b", "ini mengindikasikan bahwa"),
                 (r"(?i)\bhal ini membuktikan\b", "ini membuktikan"),
@@ -399,7 +408,7 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
             ]
         elif style_mode == "kreatif":
             replacements = [
-                (r"(?i)\bsecara keseluruhan,?\b", "pada akhirnya,"),
+                (r"(?i)\bsecara keseluruhan\s*,?\s*", "pada akhirnya,"),
                 (r"(?i)\bdapat disimpulkan bahwa\b", "ternyata"),
                 (r"(?i)\bhal ini\b", "ini"),
                 (r"(?i)\btersebut\b", "itu"),
@@ -413,17 +422,17 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
         else:  # populer — conversational tapi TETAP EYD
             replacements = [
                 # Ganti frasa AI dengan frasa natural EYD (bukan slang)
-                (r"(?i)\bsecara keseluruhan,?\b", "singkat kata,"),
-                (r"(?i)\bselain itu,?\b", "selain itu juga,"),
-                (r"(?i)\bkesimpulannya,?\b", "intinya,"),
-                (r"(?i)\boleh karena itu,?\b", "karena itu,"),
+                (r"(?i)\bsecara keseluruhan\s*,?\s*", "singkat kata,"),
+                (r"(?i)\bselain itu\s*,?\s*", "selain itu juga,"),
+                (r"(?i)\bkesimpulannya\s*,?\s*", "intinya,"),
+                (r"(?i)\boleh karena itu\s*,?\s*", "karena itu,"),
                 (r"(?i)\bdapat disimpulkan bahwa\b", "bisa dikatakan bahwa"),
                 (r"(?i)\bsangat penting\b", "sangat krusial"),
                 (r"(?i)\bhal ini\b", "ini"),
                 (r"(?i)\btersebut\b", "itu"),
                 (r"(?i)\bmenimbulkan\b", "menimbulkan"),
-                (r"(?i)\bnamun demikian,?\b", "namun,"),
-                (r"(?i)\bdengan demikian,?\b", "dengan begitu,"),
+                (r"(?i)\bnamun demikian\s*,?\s*", "namun,"),
+                (r"(?i)\bdengan demikian\s*,?\s*", "dengan begitu,"),
                 # HAPUS: adalah→itu, merupakan→itu (melanggar EYD)
                 # HAPUS: terhadap→pada (tidak selalu benar)
                 # HAPUS: berbagai→macam-macam (tidak selalu natural)
@@ -449,7 +458,7 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
         
     # Apply word replacements
     for pattern, replacement in replacements:
-        text = re.sub(pattern, replacement, text)
+        text = _replace_preserve_case(text, pattern, replacement)
     
     # Process paragraph by paragraph to preserve structure
     paragraphs = text.split('\n')
@@ -465,9 +474,19 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
         if len(sentences) > 1:
             for i in range(1, len(sentences)):
                 if random.random() < 0.15:  # 15% chance
-                    inj = random.choice(conversational_injects)
-                    first_char = sentences[i][0].lower() if len(sentences[i]) > 0 else ""
-                    sentences[i] = inj + first_char + sentences[i][1:]
+                    sent_lower = sentences[i].lower()
+                    # Skip jika kalimat sudah dimulai connector/transisi
+                    already_has_connector = any(
+                        sent_lower.startswith(c.lower()) 
+                        for c in ["dan ", "tapi ", "nah,", "memang,", 
+                                  "tentu", "perlu", "menarik", "di sisi",
+                                  "lebih jauh", "karena itu", "dengan begitu",
+                                  "selain", "namun", "bahkan", "justru"]
+                    )
+                    if not already_has_connector:
+                        inj = random.choice(conversational_injects)
+                        first_char = sentences[i][0].lower() if len(sentences[i]) > 0 else ""
+                        sentences[i] = inj + first_char + sentences[i][1:]
             paragraphs[p_idx] = " ".join(sentences)
             
     text = "\n".join(paragraphs)
