@@ -1,38 +1,33 @@
 {
   "user_id": "global",
   "language": "id",
-  "avg_sentence_length": 24.17,
-  "sentence_length_std": 13.3,
-  "flesch_reading_ease": 23.18,
-  "active_voice_ratio": 0.3833,
+  "avg_sentence_length": 7.16,
+  "sentence_length_std": 3.76,
+  "flesch_reading_ease": 63.49,
+  "active_voice_ratio": 0.9324,
   "top_transitions": [
-    "sebab",
-    "karena",
-    "namun",
-    "kemudian"
+    "walaupun"
   ],
-  "hedging_frequency": 0.033,
+  "hedging_frequency": 0.054,
   "emotion_register": "informal",
   "favorite_phrases": [
-    "di indonesia",
-    "terletak di",
-    "hak asasi",
-    "asasi manusia",
-    "hak asasi manusia",
-    "terbesar di",
-    "gempa bumi",
-    "yang terletak",
-    "di sebelah",
-    "pada masa"
+    "rasa nya",
+    "baru aja",
+    "di depan",
+    "nggak ngerti",
+    "nya juga",
+    "beli kopi",
+    "gue cuma",
+    "cuma bisa",
+    "nggak sih",
+    "orang-orang pada"
   ],
-  "lexical_diversity": 0.4566,
-  "paragraph_length_avg": 3.33,
+  "lexical_diversity": 0.6038,
+  "paragraph_length_avg": 14.8,
   "few_shot_examples": [
-    "Gunung Merapi adalah gunung berapi di bagian tengah Pulau Jawa dan merupakan salah satu gunung api teraktif di Indonesia. Lereng sisi selatan berada dalam administrasi Kabupaten Sleman, Daerah Istimewa Yogyakarta, dan sisanya berada dalam wilayah Provinsi Jawa Tengah, yaitu Kabupaten Magelang di sisi barat, Kabupaten Boyolali di sisi utara dan timur, serta Kabupaten Klaten di sisi tenggara. Kawasan hutan di sekitar puncaknya menjadi kawasan Taman Nasional Gunung Merapi sejak tahun 2004.",
-    "Majapahit, juga dikenal sebagai Wilwatikta, adalah sebuah kemaharajaan talasokrasi Hindu-Buddha Jawa yang berbasis di pulau Jawa, sekarang di Indonesia. Pada masa kejayaannya, setelah melakukan ekspansi militer yang signifikan, wilayah Majapahit dan negara-negara bawahannya meliputi hampir seluruh kepulauan Nusantara dan meliputi sebagian Asia Tenggara, Setelah perang saudara yang melemahkan kendali atas negara-negara bawahan, Majapahit perlahan-lahan akhirnya runtuh pada tahun 1527 akibat invasi Kesultanan Demak. Kejatuhan Majapahit menandai munculnya kerajaan-kerajaan Islam di Jawa.",
-    "Sumpah Pemuda, yang secara resmi disebut sebagai Keputusan Kongres Pemuda Indonesia adalah ikrar yang diucapkan oleh pemuda-pemudi Indonesia pada 28 Oktober 1928, yang menetapkan jati diri bangsa Indonesia. Sumpah Pemuda adalah salah satu tonggak utama dalam sejarah pergerakan kemerdekaan Indonesia. Ikrar ini merupakan bentuk pergerakan kemerdekaan Republik Indonesia oleh pemuda dan pemudi di Indonesia dengan pernyataan janji satu tanah air, satu bangsa, dan satu bahasa.",
-    "Candi Borobudur adalah sebuah candi Buddha yang terletak di Borobudur, Magelang, Jawa Tengah, Indonesia. Candi ini terletak kurang lebih 100 km di sebelah barat daya Semarang, 86 km di sebelah barat Surakarta, dan 40 km di sebelah barat laut Yogyakarta. Candi dengan banyak stupa ini didirikan oleh para penganut agama Buddha Mahayana sekitar tahun 800-an Masehi pada masa pemerintahan wangsa Syailendra, dan diperkirakan baru rampung sekitar tahun 825 M. Borobudur adalah candi atau kuil Buddha terbesar di dunia, sekaligus salah satu monumen Buddha terbesar di dunia.",
-    "Hak asasi manusia di Indonesia diterangkan dalam Undang-Undang Dasar 1945, dan peraturan-peraturan perundang-undangan di bawahnya; beberapa di antaranya dijamin sebagai dampak dari amendemen undang-undang dasar di era Reformasi. Kementerian Hukum dan Hak Asasi Manusia mengurus hal-hal terkait hak asasi manusia di dalam pemerintahan, sedangkan Komisi Nasional Hak Asasi Manusia, didirikan pada masa pemerintahan Orde Baru pada tahun 1993, adalah lembaga hak asasi manusia nasional di negara ini. Komisi Nasional Hak Asasi Manusia bersifat independen dari pemerintah dan memiliki akreditasi dari Perserikatan Bangsa-Bangsa.",
-    "Perang Jawa, yang dikenal juga sebagai Perang Diponegoro, merupakan sebuah konflik bersenjata yang berlangsung di bagian tengah dan timur Jawa antara tahun 1825 hingga 1830. Perang ini mempertemukan para perlawanan Jawa yang dipimpin oleh Pangeran Diponegoro melawan pihak kolonial Hindia Belanda yang mendapat dukungan dari negara-negara bangsawan Jawa. Peristiwa ini dianggap sebagai titik balik penting dalam sejarah, kebudayaan, dan tatanan sosial masyarakat Jawa."
+    "Baru aja nyobain kedai kopi yang lagi viral di TikTok. Namanya Kopi Senja atau apalah itu. Rame banget sumpah! Antrenya aja sampai mengular ke luar jalanan. Enak nggak sih kopinya? Hmm, biasa aja menurut gue. Malah cenderung kemanisan. Overrated deh pokoknya. Nggak ngerti kenapa orang-orang pada rela antre berjam-jam cuma buat beli kopi yang harganya juga lumayan mahal. Mungkin cuma menang di tempatnya yang estetik buat foto-foto doang kali ya. Biasalah, demi konten medsos. Kalau disuruh balik lagi ke sana sih kayaknya nggak deh. Masih mending bikin kopi sachet di rumah. Murah meriah. Sisanya bisa buat jajan seblak di depan komplek. Lebih kenyang.",
+    "Sumpah ya, ngurusin birokrasi di negara ini emang butuh kesabaran ekstra. Kemarin gue baru aja nyoba perpanjang STNK. Antreannya panjang banget gila! Dari jam 7 pagi udah ambil nomor antrean, tapi baru dipanggil jam 11 siang. Parah. Mana petugasnya jutek-jutek lagi. Bikin males aja bawaannya. Tapi ya mau gimana lagi? Kalau telat bayar pajak bisa kena denda lumayan gede. Uang dari mana coba buat bayar dendanya? Akhirnya gue cuma bisa pasrah nunggu sambil main hape sampai baterai tinggal 10 persen. Jujur capek banget. Semestinya sistemnya bisa dibikin lebih online dan efisien gitu lho. Masa hari gini masih harus fotokopi KTP berlembar-lembar? Nggak masuk akal.",
+    "Tahu nggak sih rasanya pengen liburan tapi dompet nggak mendukung? Sedih banget. Tiap buka Instagram isinya orang-orang pada healing ke Bali atau luar negeri. Iri bos! Sementara gue cuma bisa rebahan di kamar sambil rebahan dan scroll medsos terus-terusan. Bosan. Rutinitas kerja dari pagi sampai malam bikin stres numpuk. Pengen banget rasanya kabur sebentar dari hiruk pikuk kota. Ke gunung kek, atau pantai yang sepi. Yang penting bisa hirup udara segar tanpa polusi. Kapan ya kira-kira bisa cuti agak panjangan? Nabung dulu deh pelan-pelan. Semoga akhir tahun ini bisa terwujud wacana liburannya. Amin. Jangan cuma wacana doang kayak biasanya. Harus jadi pokoknya!",
+    "Belakangan ini gue lagi kecanduan banget dengerin podcast horor. Merinding! Apalagi kalau didengerin pas malem-malem sendirian di kamar. Vibes-nya dapet banget. Kadang sampai parno sendiri pas mau ke kamar mandi. Hahaha. Tapi tetep aja nagih buat didengerin terus. Entah kenapa cerita mistis orang-orang itu selalu menarik. Walaupun kadang mikir, ini beneran atau cuma karangan doang ya? Bodo amat lah. Yang penting seru buat hiburan. Ada rekomendasi podcast horor lain nggak yang ceritanya serem banget? Bosen dengerin yang itu-itu aja. Pengen nyari sensasi ketakutan yang lebih ekstrem. Siapa tahu ada yang tau, boleh lah spill di kolom komentar. Thank you!"
   ]
 }

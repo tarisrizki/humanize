@@ -340,8 +340,21 @@ def _extract_few_shot_examples(texts: list[str], avg_sentence_length: float, max
     if not valid_paras:
         return []
         
-    # Sort by closest to mean
-    valid_paras.sort(key=lambda x: x["distance"])
+    # Calculate burstiness for each paragraph
+    for item in valid_paras:
+        sents = re.split(r'[.!?]+', item["text"])
+        sents = [s.split() for s in sents if s.strip()]
+        if len(sents) > 1:
+            lengths = [len(s) for s in sents]
+            avg = sum(lengths) / len(lengths)
+            item["burstiness"] = (
+                sum((l - avg)**2 for l in lengths) / len(lengths)
+            ) ** 0.5
+        else:
+            item["burstiness"] = 0
+
+    # Sort by highest burstiness
+    valid_paras.sort(key=lambda x: x.get("burstiness", 0), reverse=True)
     
     sampled = []
     current_words = 0

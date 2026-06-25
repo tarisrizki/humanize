@@ -72,8 +72,9 @@ def load_nlp_models():
 
 def main():
     # Use the Indonesian corpus directory
-    corpus_dir = backend_dir / "data" / "training_corpus_id"
+    corpus_dir = backend_dir / "data" / "training_corpus_informal"
     
+    print(f"Reading texts from {corpus_dir}...")
     if not corpus_dir.exists():
         print(f"ERROR: {corpus_dir} does not exist.")
         print("Run download_id_corpus.py first!")

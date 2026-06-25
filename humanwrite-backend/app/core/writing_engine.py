@@ -155,7 +155,8 @@ def _apply_post_processing(text: str, lang: str) -> str:
             (r"(?i)\bperlu dicatat\b", "yang perlu digarisbawahi"),
             (r"(?i)\bdapat disimpulkan\b", "bisa dibilang"),
             (r"(?i)\bsangat penting\b", "krusial"),
-            (r"(?i)\bmerupakan\b", "adalah"),
+            (r"(?i)\bmerupakan\b", "itu"),
+            (r"(?i)\badalah\b", "itu"),
             (r"(?i)\bmemiliki\b", "punya"),
             (r"(?i)\bberbagai\b", "macam-macam"),
             (r"(?i)\bmelalui\b", "lewat"),
@@ -197,7 +198,11 @@ def _apply_post_processing(text: str, lang: str) -> str:
         if not p_text.strip():
             continue
             
-        sentences = re.split(r'(?<=\.)\s+(?=[A-Z])', p_text)
+        if lang in ("id", "mixed"):
+            sentences = re.split(r'(?<=[.!?])\s+', p_text)
+        else:
+            sentences = re.split(r'(?<=\.)\s+(?=[A-Z])', p_text)
+            
         if len(sentences) > 1:
             for i in range(1, len(sentences)):
                 if random.random() < 0.15:  # 15% chance
