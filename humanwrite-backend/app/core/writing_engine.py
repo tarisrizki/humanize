@@ -43,9 +43,8 @@ def _clean_input_draft(draft: str) -> str:
 def _build_system_prompt(style: StyleProfile, paragraph_count: int) -> str:
     style_mode = getattr(style, 'style_mode', 'populer')
 
-    lang_instruction = ""
     if style.language == "id":
-        lang_instruction = "Tulis dalam Bahasa Indonesia yang baik dan benar."
+        lang_instruction = "Tulis dalam Bahasa Indonesia yang baik dan benar sesuai EYD."
     elif style.language == "mixed":
         lang_instruction = "Pertahankan pola campur kode (Indonesia-Inggris) yang sama."
     else:
@@ -54,12 +53,12 @@ def _build_system_prompt(style: StyleProfile, paragraph_count: int) -> str:
     few_shot_text = ""
     if style.few_shot_examples:
         examples_str = "\n\n".join([
-            f"Contoh {i+1}:\n{ex}" 
+            f"Contoh {i+1}:\n{ex}"
             for i, ex in enumerate(style.few_shot_examples)
         ])
         few_shot_text = f"""
-## PANDUAN GAYA (WAJIB DIIKUTI)
-Berikut contoh nyata tulisan yang harus dijadikan acuan gaya.
+## PANDUAN GAYA PENULISAN (WAJIB DIIKUTI)
+Berikut contoh nyata tulisan yang menjadi acuan.
 Tiru irama kalimat, pilihan kata, dan alur narasinya.
 
 {examples_str}
@@ -67,72 +66,89 @@ Tiru irama kalimat, pilihan kata, dan alur narasinya.
 
     if style_mode == "akademik":
         register_rules = """
-## REGISTER: AKADEMIK
-- Gunakan bahasa formal baku sesuai EYD.
-- Kalimat pasif DIPERBOLEHKAN (lazim dalam tulisan ilmiah).
-- Gunakan hedging: "tampaknya", "cenderung", "mengindikasikan bahwa".
-- HINDARI frasa AI generik: "dapat disimpulkan bahwa", 
-  "secara keseluruhan", "hal ini menunjukkan bahwa", "sangat penting".
-- Kata "merupakan", "adalah", "berdasarkan", "sehingga" BOLEH dipakai.
-- Variasikan panjang kalimat: mix kalimat analitik panjang (20-30 kata)
-  dengan observasi singkat (5-10 kata) — ini penting.
-- Contoh variasi: "Fenomena ini mencerminkan tren global. 
-  Menarik, bukan?" atau "Data menunjukkan korelasi positif. Signifikan."
-- BURSTINESS WAJIB: setiap paragraf harus punya
-  minimal 1 kalimat sangat pendek (3-6 kata) dan
-  1 kalimat panjang (20+ kata). Contoh:
-  "Temuannya signifikan. [pendek] Analisis mendalam 
-  terhadap data longitudinal selama lima tahun 
-  menunjukkan korelasi yang konsisten antara variabel 
-  independen dan hasil yang diamati. [panjang] 
-  Patut dicermati. [pendek]"
+## REGISTER: AKADEMIK — Formal, ilmiah, baku, EYD.
+
+BOLEH:
+- Kata formal: merupakan, adalah, berdasarkan, sehingga, 
+  mengindikasikan, menunjukkan, dilakukan, diperoleh.
+- Kalimat pasif (lazim dalam tulisan ilmiah).
+- Hedging: "tampaknya", "cenderung menunjukkan", 
+  "mengindikasikan bahwa", "dapat diasumsikan".
+- Catatan analitis pendek: "Ini signifikan.", 
+  "Perlu dicermati.", "Menarik untuk dikaji."
+
+HINDARI MUTLAK:
+- Bahasa informal: "masih ingat kan?", "bukan?", 
+  "sungguh kompleks", "semoga saja", "ya kan".
+- Pertanyaan retoris informal.
+- Kalimat baru yang tidak ada di draf asli.
+
+BURSTINESS (WAJIB):
+- Setiap paragraf HARUS mengandung minimal:
+  * 1 kalimat analitis pendek (5-8 kata): 
+    "Ini signifikan.", "Angka ini mengkhawatirkan.", 
+    "Dampaknya luas."
+  * 1 kalimat panjang dan detail (20-30 kata).
+- Jangan semua kalimat seragam panjangnya.
 """
     elif style_mode == "profesional":
         register_rules = """
-## REGISTER: PROFESIONAL
-- Gunakan bahasa formal-fungsional sesuai EYD.
-- Kalimat aktif, ringkas, dan to-the-point.
-- HINDARI: "hal ini", "tersebut", "sangat penting", 
-  "dapat disimpulkan", "secara keseluruhan".
-- Variasikan panjang kalimat: mix kalimat panjang yang informatif 
-  dengan pernyataan pendek yang tegas (3-6 kata).
-- Contoh: "Hasilnya signifikan. Namun perlu analisis lebih lanjut 
-  sebelum keputusan diambil."
-- BURSTINESS WAJIB: mix kalimat tegas pendek (3-6 kata)
-  dengan kalimat informatif panjang (18+ kata).
-  Jangan semua kalimat punya panjang seragam.
+## REGISTER: PROFESIONAL — Formal, ringkas, action-oriented.
+
+BOLEH:
+- Bahasa fungsional baku, to-the-point.
+- Kalimat aktif yang tegas.
+- Catatan pendek: "Faktanya.", "Ini penting.", "Perlu diperhatikan."
+
+HINDARI:
+- Jargon berlebihan, frasa AI generik.
+- Kalimat baru yang tidak ada di draf asli.
+
+BURSTINESS (WAJIB):
+- Mix kalimat tegas pendek (3-6 kata) dengan 
+  kalimat informatif panjang (18-25 kata).
+- Jangan semua kalimat seragam.
 """
     elif style_mode == "kreatif":
         register_rules = """
-## REGISTER: KREATIF  
-- Utamakan ritme dan emosi, bukan struktur formal.
-- Gunakan diksi yang vivid, metafora, dan detail sensoris.
-- Variasi panjang kalimat EKSTREM: dari 2-3 kata hingga 30-35 kata.
-- Boleh mulai kalimat dengan "Dan", "Tapi", "Karena", "Meski".
-- HINDARI: penjelasan terlalu eksplisit, frasa klise AI.
+## REGISTER: KREATIF — Ekspresif, naratif, emosional.
+
+BOLEH:
+- Diksi vivid, metafora, detail sensoris.
+- Kalimat sangat pendek (2-4 kata) dan sangat panjang (30+ kata).
+- Mulai kalimat dengan "Dan", "Tapi", "Meski", "Karena".
+
+HINDARI:
+- Frasa klise AI, penjelasan terlalu eksplisit.
+- Kalimat baru yang tidak ada di draf asli.
+
+BURSTINESS (WAJIB):
+- Variasi panjang kalimat EKSTREM: 2-3 kata hingga 35 kata.
 - Show, don't tell.
 """
     else:  # populer
         register_rules = """
-## REGISTER: POPULER
-- Gunakan bahasa yang mudah dipahami, mengalir natural.
-- Tetap mengikuti EYD — bukan bahasa gaul atau slang.
-- Boleh conversational tapi pilihan kata tetap baku.
-- HINDARI: "hal ini", "tersebut", "dapat disimpulkan", 
-  "secara keseluruhan", "sangat penting", "merupakan".
-- Variasikan panjang kalimat: mix kalimat panjang yang mengalir
-  dengan kalimat pendek yang tegas.
-- Contoh: "Situasinya memang rumit. Tapi bukan berarti tidak bisa 
-  diselesaikan — asalkan ada kemauan dari semua pihak."
-- BURSTINESS WAJIB: setiap paragraf harus mengandung
-  kalimat sangat pendek (3-5 kata) dan kalimat 
-  panjang yang mengalir (20+ kata). Variasi ini 
-  membuat tulisan terasa hidup dan natural.
+## REGISTER: POPULER — Mudah dipahami, mengalir, EYD.
+
+BOLEH:
+- Bahasa conversational namun tetap baku dan EYD.
+- Kalimat pendek tegas: "Ini penting.", "Tidak mudah.", 
+  "Wajar saja.", "Cukup rumit."
+
+HINDARI:
+- Bahasa gaul, slang, tidak EYD.
+- "hal ini", "tersebut", "dapat disimpulkan", 
+  "secara keseluruhan", "sangat penting".
+- Kalimat baru yang tidak ada di draf asli.
+
+BURSTINESS (WAJIB):
+- Mix kalimat pendek (3-5 kata) dan kalimat panjang 
+  yang mengalir (18-25 kata) dalam setiap paragraf.
 """
 
-    return f"""Kamu penulis manusia, bukan AI. Tugas kamu: tulis ulang draf ini
-agar terdengar benar-benar ditulis manusia dan tidak terdeteksi 
-oleh detektor AI seperti GPTZero.
+    return f"""Kamu penulis manusia berpengalaman, bukan AI.
+Tugas: tulis ulang draf agar tidak terdeteksi detektor AI
+seperti GPTZero, sambil mempertahankan semua fakta asli.
 
 {lang_instruction}
 
@@ -140,24 +156,33 @@ oleh detektor AI seperti GPTZero.
 
 {register_rules}
 
-## ATURAN UNIVERSAL ANTI-DETEKSI
-1. PERTAHANKAN semua fakta dan makna dari draf asli.
-2. JANGAN tambahkan informasi baru.
-3. BURSTINESS EKSTREM: setiap paragraf WAJIB mengandung
-   minimal satu kalimat pendek (≤5 kata) DAN satu kalimat
-   panjang (≥20 kata). Variasi ini krusial.
-4. JANGAN mulai dua kalimat berturut dengan kata yang sama.
-5. JANGAN gunakan struktur paralel berulang.
-6. JANGAN tambah kalimat baru yang tidak ada di draf asli.
-   Kalimat pertanyaan atau observasi HANYA boleh jika 
-   memang ada di draf asli dan hanya diparafrasekan.
-7. STRUKTUR PARAGRAF WAJIB DIPERTAHANKAN:
-   - Draf asli punya {paragraph_count} paragraf.
-   - Output HARUS punya PERSIS {paragraph_count} paragraf.
-   - Setiap paragraf dipisahkan dengan baris kosong.
+## ATURAN WAJIB (TIDAK BOLEH DILANGGAR)
+
+1. PERTAHANKAN SEMUA FAKTA: jangan ubah, hapus, 
+   atau tambah informasi faktual apapun.
+
+2. JANGAN TAMBAH KALIMAT BARU: setiap kalimat di output
+   harus merupakan parafrasa dari kalimat di draf asli.
+   DILARANG menambah opini, pertanyaan, atau informasi
+   yang tidak ada di draf.
+
+3. STRUKTUR PARAGRAF WAJIB DIPERTAHANKAN:
+   - Draf asli: {paragraph_count} paragraf.
+   - Output WAJIB: persis {paragraph_count} paragraf.
+   - Pisahkan dengan baris kosong antar paragraf.
    - JANGAN gabungkan atau pisahkan paragraf.
-   - Ini adalah aturan TIDAK BOLEH DILANGGAR.
-8. Catat semua perubahan signifikan di changes_made.
+   - INI ATURAN PALING PENTING. PELANGGARAN TIDAK DIIZINKAN.
+
+4. BURSTINESS: ikuti instruksi register di atas.
+   Variasi panjang kalimat adalah kunci output berkualitas.
+
+5. TIDAK ADA FRASA AI: hindari "hal ini menunjukkan bahwa",
+   "dapat disimpulkan", "secara keseluruhan", "sangat penting",
+   "selain itu", "oleh karena itu", "dengan demikian",
+   "tersebut", "memiliki", "berbagai", "merupakan".
+   Ganti dengan parafrasa yang lebih natural sesuai register.
+
+6. Catat perubahan signifikan di changes_made.
 """
 
 
@@ -442,8 +467,8 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
                 (r"(?i)\bsehingga\b", "hingga"),
             ]
             conversational_injects = [
-                "Dan ", "Tapi ", "Meski begitu, ", "Anehnya, ",
-                "Yang jelas, ", "Sayangnya, "
+                "Dan ", "Tapi ", "Meski begitu, ", 
+                "Anehnya, ", "Yang jelas, ", "Sayangnya, "
             ]
         else:  # populer — conversational tapi TETAP EYD
             replacements = [
@@ -502,7 +527,7 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
                     sent_lower = sentences[i].lower()
                     # Skip jika kalimat sudah dimulai connector/transisi
                     already_has_connector = any(
-                        sent_lower.startswith(c.lower()) 
+                        sent_lower.startswith(c.lower())
                         for c in [
                             "dan ", "tapi ", "nah,", "memang,", "tentu",
                             "perlu", "menarik", "di sisi", "lebih jauh",
@@ -510,9 +535,11 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
                             "bahkan", "justru", "oleh karena", "dengan demikian",
                             "sementara", "adapun", "terkait", "di samping",
                             "pada akhirnya", "singkat kata", "intinya",
-                            "buktinya", "ternyata", "maka,", "tiba-tiba",
+                            "buktinya", "ternyata", "maka,", "anehnya",
                             "sayangnya", "secara umum", "dalam konteks",
-                            "berdasarkan", "di samping itu",
+                            "berdasarkan", "di samping itu", "meski begitu",
+                            "yang jelas", "kondisi ini", "temuan ini",
+                            "data ini", "dapat dikatakan", "perlu diperhatikan",
                         ]
                     )
                     if not already_has_connector:
@@ -534,50 +561,40 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
 os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
 
 def _validate_paragraph_count(
-    text: str, 
-    expected: int, 
+    text: str,
+    expected: int,
     original_draft: str
 ) -> str:
-    """
-    Jika Groq menghasilkan paragraf yang salah jumlah,
-    coba recover dengan membagi ulang berdasarkan 
-    jumlah kalimat yang proporsional.
-    """
-    actual_paras = [p.strip() for p in text.split('\n\n') if p.strip()]
-    if len(actual_paras) == expected:
-        return text  # ✅ Sudah benar
-    
-    # Fallback: jika hasilnya 1 paragraf tapi harusnya >1,
-    # bagi berdasarkan kalimat
-    if len(actual_paras) == 1 and expected > 1:
-        # Hitung berapa kalimat per paragraf asli
+    """Pastikan jumlah paragraf output sesuai draf asli."""
+    actual = [p.strip() for p in text.split('\n\n') if p.strip()]
+    if len(actual) == expected:
+        return text
+
+    # Fallback: jika output jadi 1 paragraf tapi harusnya lebih
+    if len(actual) == 1 and expected > 1:
         orig_paras = [p.strip() for p in original_draft.split('\n\n') if p.strip()]
-        all_sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-        
-        # Bagi kalimat secara proporsional
-        orig_sent_counts = []
-        for op in orig_paras:
-            count = len(re.split(r'(?<=[.!?])\s+', op.strip()))
-            orig_sent_counts.append(max(1, count))
-        
-        total_orig = sum(orig_sent_counts)
-        total_new = len(all_sentences)
-        
-        result_paras = []
+        all_sents = re.split(r'(?<=[.!?])\s+', text.strip())
+
+        orig_counts = [
+            max(1, len(re.split(r'(?<=[.!?])\s+', op.strip())))
+            for op in orig_paras
+        ]
+        total_orig = sum(orig_counts)
+        total_new = len(all_sents)
+
+        result = []
         idx = 0
-        for i, orig_count in enumerate(orig_sent_counts):
-            if i == len(orig_sent_counts) - 1:
-                # Paragraf terakhir: ambil sisa semua
-                result_paras.append(' '.join(all_sentences[idx:]))
+        for i, count in enumerate(orig_counts):
+            if i == len(orig_counts) - 1:
+                result.append(' '.join(all_sents[idx:]))
             else:
-                # Proporsi kalimat
-                take = max(1, round(orig_count / total_orig * total_new))
-                result_paras.append(' '.join(all_sentences[idx:idx+take]))
+                take = max(1, round(count / total_orig * total_new))
+                result.append(' '.join(all_sents[idx:idx + take]))
                 idx += take
-        
-        return '\n\n'.join(result_paras)
-    
-    return text  # Biarkan jika tidak bisa di-recover
+
+        return '\n\n'.join(p for p in result if p.strip())
+
+    return text
 
 async def apply_style_stream(draft: str, style: StyleProfile) -> AsyncGenerator[str, None]:
     clean_draft = _clean_input_draft(draft)

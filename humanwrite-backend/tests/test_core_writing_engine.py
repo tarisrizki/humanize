@@ -19,7 +19,7 @@ def test_build_system_prompt_id():
         language="id"
     )
     prompt = _build_system_prompt(profile, paragraph_count=1)
-    assert "Tulis dalam Bahasa Indonesia yang baik dan benar." in prompt
+    assert "Tulis dalam Bahasa Indonesia yang baik dan benar sesuai EYD." in prompt
 
 @pytest.mark.asyncio
 @patch("app.core.writing_engine.Agent")
