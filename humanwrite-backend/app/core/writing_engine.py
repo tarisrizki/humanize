@@ -41,90 +41,102 @@ def _clean_input_draft(draft: str) -> str:
 
 
 def _build_system_prompt(style: StyleProfile, paragraph_count: int) -> str:
-    """Generate a detailed system prompt heavily weighting few-shot examples."""
+    style_mode = getattr(style, 'style_mode', 'populer')
 
     lang_instruction = ""
     if style.language == "id":
-        lang_instruction = """
-LANGUAGE: The user writes in Indonesian (Bahasa Indonesia).
-- Maintain natural Indonesian phrasing and grammar.
-- Use appropriate Indonesian formal/informal register as indicated.
-- Do NOT translate to English.
-"""
+        lang_instruction = "Tulis dalam Bahasa Indonesia yang baik dan benar."
     elif style.language == "mixed":
-        lang_instruction = """
-LANGUAGE: The user writes in a mix of Indonesian and English.
-- Maintain the same code-switching pattern.
-- Keep the same ratio of Indonesian to English.
-"""
+        lang_instruction = "Pertahankan pola campur kode (Indonesia-Inggris) yang sama."
     else:
-        lang_instruction = """
-LANGUAGE: The user writes in English.
-- Maintain natural English phrasing and grammar.
-"""
+        lang_instruction = "Write in natural English."
 
     few_shot_text = ""
     if style.few_shot_examples:
-        examples_str = "\n\n".join([f"Example {i+1}:\n{ex}" for i, ex in enumerate(style.few_shot_examples)])
+        examples_str = "\n\n".join([
+            f"Contoh {i+1}:\n{ex}" 
+            for i, ex in enumerate(style.few_shot_examples)
+        ])
         few_shot_text = f"""
-## PRIMARY DIRECTIVE: FEW-SHOT EXAMPLES
-The following paragraphs are examples of the author's ACTUAL writing. 
-You MUST use these examples as your primary stylistic ground truth. Match the cadence, phrasing, and natural flow of these examples exactly.
+## PANDUAN GAYA (WAJIB DIIKUTI)
+Berikut contoh nyata tulisan yang harus dijadikan acuan gaya.
+Tiru irama kalimat, pilihan kata, dan alur narasinya.
 
 {examples_str}
 """
 
-    return f"""You are a native Indonesian human writer, NOT an AI assistant. You are rewriting a draft 
-to sound like it was written by a real person with a unique voice. Your goal is to make the text 
-COMPLETELY UNDETECTABLE by AI detection tools like GPTZero, Originality.ai, and ZeroGPT.
+    if style_mode == "akademik":
+        register_rules = """
+## REGISTER: AKADEMIK
+- Gunakan bahasa formal baku sesuai EYD.
+- Kalimat pasif DIPERBOLEHKAN (lazim dalam tulisan ilmiah).
+- Gunakan hedging: "tampaknya", "cenderung", "mengindikasikan bahwa".
+- HINDARI frasa AI generik: "dapat disimpulkan bahwa", 
+  "secara keseluruhan", "hal ini menunjukkan bahwa", "sangat penting".
+- Kata "merupakan", "adalah", "berdasarkan", "sehingga" BOLEH dipakai.
+- Variasikan panjang kalimat: mix kalimat analitik panjang (20-30 kata)
+  dengan observasi singkat (5-10 kata) — ini penting.
+- Contoh variasi: "Fenomena ini mencerminkan tren global. 
+  Menarik, bukan?" atau "Data menunjukkan korelasi positif. Signifikan."
+"""
+    elif style_mode == "profesional":
+        register_rules = """
+## REGISTER: PROFESIONAL
+- Gunakan bahasa formal-fungsional sesuai EYD.
+- Kalimat aktif, ringkas, dan to-the-point.
+- HINDARI: "hal ini", "tersebut", "sangat penting", 
+  "dapat disimpulkan", "secara keseluruhan".
+- Variasikan panjang kalimat: mix kalimat panjang yang informatif 
+  dengan pernyataan pendek yang tegas (3-6 kata).
+- Contoh: "Hasilnya signifikan. Namun perlu analisis lebih lanjut 
+  sebelum keputusan diambil."
+"""
+    elif style_mode == "kreatif":
+        register_rules = """
+## REGISTER: KREATIF  
+- Utamakan ritme dan emosi, bukan struktur formal.
+- Gunakan diksi yang vivid, metafora, dan detail sensoris.
+- Variasi panjang kalimat EKSTREM: dari 2-3 kata hingga 30-35 kata.
+- Boleh mulai kalimat dengan "Dan", "Tapi", "Karena", "Meski".
+- HINDARI: penjelasan terlalu eksplisit, frasa klise AI.
+- Show, don't tell.
+"""
+    else:  # populer
+        register_rules = """
+## REGISTER: POPULER
+- Gunakan bahasa yang mudah dipahami, mengalir natural.
+- Tetap mengikuti EYD — bukan bahasa gaul atau slang.
+- Boleh conversational tapi pilihan kata tetap baku.
+- HINDARI: "hal ini", "tersebut", "dapat disimpulkan", 
+  "secara keseluruhan", "sangat penting", "merupakan".
+- Variasikan panjang kalimat: mix kalimat panjang yang mengalir
+  dengan kalimat pendek yang tegas.
+- Contoh: "Situasinya memang rumit. Tapi bukan berarti tidak bisa 
+  diselesaikan — asalkan ada kemauan dari semua pihak."
+"""
+
+    return f"""Kamu penulis manusia, bukan AI. Tugas kamu: tulis ulang draf ini
+agar terdengar benar-benar ditulis manusia dan tidak terdeteksi 
+oleh detektor AI seperti GPTZero.
 
 {lang_instruction}
 
 {few_shot_text}
 
-## STYLE METRICS
-- Average sentence length: ~{style.avg_sentence_length} words
-- Active voice ratio: {style.active_voice_ratio:.0%}
-- Preferred transitions: {", ".join(style.top_transitions) if style.top_transitions else "minimal"}
-- Tone & Register: {style.emotion_register}
-- Favorite phrases: {", ".join(f'"{p}"' for p in style.favorite_phrases) if style.favorite_phrases else "none identified"}
+{register_rules}
 
-## CRITICAL ANTI-DETECTION RULES
-
-1. PRESERVE all factual content and meaning from the original draft.
-2. DO NOT add new information that wasn't in the draft.
-
-3. EXTREME BURSTINESS (MOST IMPORTANT):
-   - You MUST alternate between very short sentences (2-5 words) and long complex sentences (25-40 words).
-   - Every paragraph MUST contain at least one sentence of 4 words or fewer.
-   - Example rhythm: "Banjir datang tiba-tiba. [short] Warga yang tinggal di bantaran sungai langsung berhamburan keluar rumah sambil membawa barang-barang berharga mereka yang sempat diselamatkan. [very long] Panik. [ultra short] Beberapa orang tua kesulitan berjalan karena air sudah setinggi lutut dan arus cukup deras. [long]"
-
-4. UNPREDICTABLE VOCABULARY:
-   - NEVER use these AI-typical words/phrases: "merupakan", "memiliki", "berbagai", "melalui", "serta", 
-     "selain itu", "oleh karena itu", "secara keseluruhan", "penting untuk", "di sisi lain", 
-     "perlu dicatat", "hal ini", "dalam hal ini", "dapat disimpulkan", "sangat penting"
-   - Use informal alternatives: "merupakan" → "itu", "memiliki" → "punya", "berbagai" → "macam-macam", 
-     "melalui" → "lewat", "serta" → "dan juga"
-
-5. HUMAN IMPERFECTIONS:
-   - Start some sentences with conjunctions: "Dan...", "Tapi...", "Soalnya..."
-   - Use rhetorical questions: "Apa yang terjadi selanjutnya?", "Siapa yang mau disalahkan?"
-   - Add parenthetical asides: "(ya, memang begitu kenyataannya)"
-   - Occasionally use first person: "kalau saya lihat...", "menurut saya..."
-   - Use colloquial connectors: "nah", "jadi begini", "yang jelas"
-
-6. PARAGRAPH STRUCTURE:
-   - The original draft has exactly {paragraph_count} paragraph(s).
-   - Your rewrite MUST have EXACTLY {paragraph_count} paragraph(s), separated by blank lines.
-   - DO NOT merge or split paragraphs.
-
-7. NO AI PATTERNS:
-   - Never start consecutive sentences with the same word.
-   - Never use parallel sentence structures (e.g., "X menyebabkan Y. A menyebabkan B.")
-   - Don't end with a neat summary or conclusion unless the original does.
-   - Don't use overly formal or academic tone.
-
-8. List all significant changes you made in changes_made.
+## ATURAN UNIVERSAL ANTI-DETEKSI
+1. PERTAHANKAN semua fakta dan makna dari draf asli.
+2. JANGAN tambahkan informasi baru.
+3. BURSTINESS EKSTREM: setiap paragraf WAJIB mengandung
+   minimal satu kalimat pendek (≤5 kata) DAN satu kalimat
+   panjang (≥20 kata). Variasi ini krusial.
+4. JANGAN mulai dua kalimat berturut dengan kata yang sama.
+5. JANGAN gunakan struktur paralel berulang.
+6. Tambahkan pertanyaan retoris atau observasi personal 
+   yang sesuai register.
+7. Output HARUS persis {paragraph_count} paragraf.
+8. Catat semua perubahan signifikan di changes_made.
 """
 
 
@@ -184,40 +196,58 @@ def _score_sentence_ai_likeness(sentence: str, lang: str = "id") -> bool:
     return score >= 3.5
 
 
-def _programmatic_sentence_humanize(text: str, lang: str) -> str:
+def _programmatic_sentence_humanize(text: str, lang: str, style_mode: str = "populer") -> str:
     """Rule-based sentence transformation. No LLM — 100% reliable."""
     if lang not in ("id", "mixed"):
         return text
 
-    # Per-sentence AI opener rules
-    opener_rules = [
-        (r'^Hal ini menunjukkan bahwa ', 'Ternyata, '),
-        (r'^Hal ini membuktikan bahwa ', 'Buktinya, '),
-        (r'^Hal ini dapat ', 'Ini bisa '),
-        (r'^Hal ini ', 'Ini '),
-        (r'^Dapat disimpulkan bahwa ', 'Intinya, '),
-        (r'^Dapat diketahui bahwa ', 'Yang jelas, '),
-        (r'^Dapat dilihat bahwa ', 'Terlihat bahwa '),
-        (r'^Perlu diketahui bahwa ', 'Perlu diketahui bahwa '),
-        (r'^Perlu dicatat bahwa ', 'Perlu dicatat, '),
-        (r'^Selain itu, ', 'Dan '),
-        (r'^Selain itu ', 'Dan '),
-        (r'^Dengan demikian, ', 'Makanya, '),
-        (r'^Dengan demikian ', 'Makanya '),
-        (r'^Oleh karena itu, ', 'Makanya, '),
-        (r'^Oleh karena itu ', 'Makanya '),
-        (r'^Berdasarkan hal tersebut', 'Dari situ'),
-        (r'^Berdasarkan ', 'Menurut '),
-        (r'^Dalam hal ini, ', 'Soal ini, '),
-        (r'^Dalam konteks ini, ', 'Di sini, '),
-        (r'^Secara keseluruhan, ', 'Singkat cerita, '),
-        (r'^Secara umum, ', 'Umumnya, '),
-        (r'^Sementara itu, ', 'Di sisi lain, '),
-        (r'^Adapun ', ''),
-        (r'^Terkait dengan ', 'Soal '),
-        (r'^Melalui ', 'Lewat '),
-        (r'^Untuk mencapai ', 'Buat mencapai '),
-    ]
+    if style_mode in ("akademik", "profesional"):
+        opener_rules = [
+            # Formal: ganti AI-opener tapi tetap baku
+            (r'^Hal ini menunjukkan bahwa ', 'Temuan ini mengindikasikan bahwa '),
+            (r'^Hal ini membuktikan bahwa ', 'Data ini membuktikan bahwa '),
+            (r'^Hal ini ', 'Kondisi ini '),
+            (r'^Dapat disimpulkan bahwa ', 'Dapat dikatakan bahwa '),
+            (r'^Dapat diketahui bahwa ', 'Terlihat bahwa '),
+            (r'^Selain itu, ', 'Di samping itu, '),
+            (r'^Selain itu ', 'Di samping itu '),
+            (r'^Dengan demikian, ', 'Dengan begitu, '),
+            (r'^Oleh karena itu, ', 'Karena itu, '),
+            (r'^Berdasarkan hal tersebut', 'Berdasarkan hal di atas'),
+            (r'^Secara keseluruhan, ', 'Secara umum, '),
+            (r'^Sementara itu, ', 'Di sisi lain, '),
+            (r'^Adapun ', 'Adapun '),
+            # Jangan ganti: Berdasarkan, Melalui, Terhadap — kata baku
+        ]
+    elif style_mode == "kreatif":
+        opener_rules = [
+            (r'^Hal ini menunjukkan bahwa ', 'Ternyata, '),
+            (r'^Hal ini ', 'Ini '),
+            (r'^Dapat disimpulkan bahwa ', 'Pada akhirnya, '),
+            (r'^Selain itu, ', 'Dan '),
+            (r'^Dengan demikian, ', 'Maka, '),
+            (r'^Oleh karena itu, ', 'Karena itu, '),
+            (r'^Sementara itu, ', 'Sementara '),
+            (r'^Adapun ', ''),
+        ]
+    else:  # populer
+        opener_rules = [
+            # Conversational tapi tetap EYD
+            (r'^Hal ini menunjukkan bahwa ', 'Ternyata, '),
+            (r'^Hal ini membuktikan bahwa ', 'Buktinya, '),
+            (r'^Hal ini ', 'Ini '),
+            (r'^Dapat disimpulkan bahwa ', 'Intinya, '),
+            (r'^Dapat diketahui bahwa ', 'Yang jelas, '),
+            (r'^Selain itu, ', 'Selain itu juga, '),
+            (r'^Selain itu ', 'Dan '),
+            (r'^Dengan demikian, ', 'Dengan begitu, '),
+            (r'^Oleh karena itu, ', 'Karena itu, '),
+            (r'^Berdasarkan hal tersebut', 'Dari situ'),
+            (r'^Berdasarkan ', 'Menurut '),
+            (r'^Secara keseluruhan, ', 'Singkat kata, '),
+            (r'^Sementara itu, ', 'Di sisi lain, '),
+            (r'^Adapun ', ''),
+        ]
 
     # Word-level replacements (applied after opener rules)
     word_rules = [
@@ -494,7 +524,7 @@ async def apply_style_stream(draft: str, style: StyleProfile) -> AsyncGenerator[
     text = _inject_short_sentences(text, style.language, style_mode)
     
     # ── PASS 2: Sentence-level targeted rewrite ───────────────
-    text = _programmatic_sentence_humanize(text, style.language)
+    text = _programmatic_sentence_humanize(text, style.language, style_mode)
     
     # ── Light post-process again ──────────────────────────────
     text = _apply_post_processing(text, style.language, style_mode)
@@ -538,7 +568,7 @@ async def apply_style(draft: str, style: StyleProfile) -> ProcessedText:
     
     text = _apply_post_processing(text, style.language, style_mode)
     text = _inject_short_sentences(text, style.language, style_mode)
-    text = _programmatic_sentence_humanize(text, style.language)
+    text = _programmatic_sentence_humanize(text, style.language, style_mode)
     text = _apply_post_processing(text, style.language, style_mode)
     
     result.output.final_text = text
