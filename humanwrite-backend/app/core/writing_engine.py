@@ -14,7 +14,6 @@ from pydantic_ai import Agent
 from pydantic_ai.models.fallback import FallbackModel
 
 from app.config import settings
-from app.core.detection_scorer import score_humanness
 from app.models.schemas import ProcessedText
 from app.models.style_profile import StyleProfile
 
@@ -129,7 +128,165 @@ COMPLETELY UNDETECTABLE by AI detection tools like GPTZero, Originality.ai, and 
 """
 
 
-def _inject_short_sentences(text: str, lang: str) -> str:
+def _score_sentence_ai_likeness(sentence: str, lang: str = "id") -> bool:
+    """Return True if sentence looks AI-generated."""
+    s = sentence.lower().strip()
+    score = 0
+    
+    if lang in ("id", "mixed"):
+        ai_starters = [
+            "hal ini", "selain itu", "dengan demikian", "dapat ",
+            "perlu ", "dalam hal", "sebagai ", "oleh karena", 
+            "secara ", "berdasarkan", "di samping", "sementara itu",
+            "adapun", "terkait", "melalui", "untuk mencapai",
+        ]
+        ai_words = [
+            "merupakan", "memiliki", "berbagai", "sehingga",
+            "serta", "tersebut", "dilakukan", "digunakan",
+            "menunjukkan bahwa", "dapat disimpulkan", "penting untuk",
+        ]
+    else:
+        ai_starters = [
+            "this ", "it is", "in addition", "furthermore",
+            "moreover", "additionally", "consequently", "therefore",
+            "in conclusion", "it should", "in order to", "as a result",
+        ]
+        ai_words = [
+            "utilize", "leverage", "facilitate", "demonstrate",
+            "indicate", "significant", "crucial", "ensure", "implement",
+        ]
+    
+    # AI starter: +3
+    for starter in ai_starters:
+        if s.startswith(starter):
+            score += 3
+            break
+    
+    # Uniform length (10-20 words): +1
+    words = s.split()
+    if 10 <= len(words) <= 20:
+        score += 1
+    
+    # No personal voice: +1
+    personal = ["saya", "kami", "kita", "gue", "aku"] if lang in ("id","mixed") \
+               else ["i ", "we ", "my ", "our "]
+    if not any(m in s for m in personal):
+        score += 1
+    
+    # AI-typical words found: +2
+    if any(w in s for w in ai_words):
+        score += 2
+    
+    # No questions or exclamations: +0.5
+    if "?" not in sentence and "!" not in sentence:
+        score += 0.5
+    
+    return score >= 3.5
+
+
+async def _rewrite_flagged_sentences(
+    text: str, 
+    lang: str,
+    style_mode: str,
+    agent,
+    max_passes: int = 2,
+) -> str:
+    """Identify AI-flagged sentences and rewrite only those."""
+    
+    if style_mode == "akademik":
+        persona = "akademisi yang menulis dengan gaya personal namun tetap ilmiah"
+        avoid = "Hindari: 'hal ini', 'dapat disimpulkan', 'menunjukkan bahwa', 'tersebut'"
+    elif style_mode == "profesional":
+        persona = "profesional berpengalaman yang menulis ringkas dan to-the-point"
+        avoid = "Hindari: 'hal ini', 'berbagai', 'sehingga', 'tersebut', kalimat pasif berlebihan"
+    elif style_mode == "kreatif":
+        persona = "penulis kreatif dengan gaya naratif yang hidup dan emosional"
+        avoid = "Hindari: kalimat formal, struktur subjek-predikat-objek yang robotik"
+    else:  # populer
+        persona = "blogger santai yang nulis seperti ngobrol dengan teman"
+        avoid = "Hindari: 'hal ini', 'berbagai', 'merupakan', 'tersebut', kalimat pasif"
+    
+    system_prompt = f"""Kamu {persona}. Tugas kamu: tulis ulang kalimat-kalimat yang terdengar 
+seperti ditulis AI, agar terdengar natural dan manusiawi.
+
+{avoid}
+
+ATURAN:
+- Ganti kalimat yang dimulai dengan kata AI-typical
+- Pecah kalimat panjang seragam menjadi variasi pendek+panjang
+- Tambahkan pertanyaan retoris atau ekspresi personal jika sesuai
+- Pertahankan makna aslinya
+- HANYA kembalikan kalimat yang sudah ditulis ulang, 
+  dengan format yang sama persis (nomor. kalimat)"""
+    
+    from pydantic_ai import Agent as SimpleAgent
+    from pydantic_ai.models.fallback import FallbackModel
+    
+    plain_agent = SimpleAgent(
+        model=FallbackModel(
+            "groq:llama-3.3-70b-versatile", 
+            "groq:llama-3.1-8b-instant"
+        ),
+        system_prompt=system_prompt,
+    )
+    
+    for pass_num in range(max_passes):
+        # Split preserving paragraph structure
+        paragraphs = text.split('\n')
+        changed = False
+        
+        for p_idx, para in enumerate(paragraphs):
+            if not para.strip():
+                continue
+            
+            sentences = re.split(r'(?<=[.!?])\s+', para.strip())
+            flagged = [
+                (i, s) for i, s in enumerate(sentences)
+                if _score_sentence_ai_likeness(s, lang) and len(s.split()) > 4
+            ]
+            
+            if not flagged:
+                continue
+            
+            # Build rewrite request for this paragraph's flagged sentences
+            input_lines = "\n".join([
+                f"{i+1}. {s}" for i, s in flagged
+            ])
+            
+            try:
+                result = await plain_agent.run(
+                    f"Tulis ulang kalimat-kalimat ini:\n\n{input_lines}",
+                    model_settings={"temperature": 1.4}
+                )
+                output = result.output if isinstance(result.output, str) else str(result.output)
+                
+                # Parse numbered output
+                rewrites = {}
+                for line in output.strip().split('\n'):
+                    m = re.match(r'^(\d+)\.\s+(.+)$', line.strip())
+                    if m:
+                        rewrites[int(m.group(1)) - 1] = m.group(2).strip()
+                
+                # Apply rewrites
+                for orig_idx, _ in flagged:
+                    if orig_idx in rewrites and rewrites[orig_idx]:
+                        sentences[orig_idx] = rewrites[orig_idx]
+                        changed = True
+                        
+                paragraphs[p_idx] = ' '.join(sentences)
+                
+            except Exception:
+                continue  # Skip if rewrite fails, keep original
+        
+        text = '\n'.join(paragraphs)
+        
+        if not changed:
+            break
+    
+    return text
+
+
+def _inject_short_sentences(text: str, lang: str, style_mode: str = "populer") -> str:
     if lang in ("id", "mixed"):
         short_injects = ["Parah.", "Serius.", "Pusing.", 
             "Gila sih.", "Capek banget.", "Aneh emang.", 
@@ -153,7 +310,7 @@ def _inject_short_sentences(text: str, lang: str) -> str:
     return '\n'.join(result)
 
 
-def _apply_post_processing(text: str, lang: str) -> str:
+def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") -> str:
     """Apply aggressive post-processing to break AI detection patterns."""
     if not text:
         return text
@@ -249,136 +406,97 @@ def _apply_post_processing(text: str, lang: str) -> str:
 os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
 
 async def apply_style_stream(draft: str, style: StyleProfile) -> AsyncGenerator[str, None]:
-    """Rewrite a draft to match the given StyleProfile, streaming the output via SSE.
-    
-    Yields Server-Sent Events formatted strings:
-    event: text
-    data: <chunk>
-    
-    event: metrics
-    data: <json>
-    """
-    # Clean input and count paragraphs
     clean_draft = _clean_input_draft(draft)
     paragraph_count = _count_paragraphs(clean_draft)
-    
     system_prompt = _build_system_prompt(style, paragraph_count)
-
+    
     agent = Agent(
-        model=FallbackModel("groq:llama-3.3-70b-versatile", "groq:llama-3.1-8b-instant"),
+        model=FallbackModel(
+            "groq:llama-3.3-70b-versatile", 
+            "groq:llama-3.1-8b-instant"
+        ),
         system_prompt=system_prompt,
         output_type=ProcessedText,
     )
     
-    max_attempts = 3
-    current_draft = f"Rewrite this draft to sound like a natural human wrote it. The draft has {paragraph_count} paragraphs — keep exactly {paragraph_count} paragraphs in your output:\n\n{clean_draft}"
+    style_mode = getattr(style, 'style_mode', 'populer')
+    score_lang = "id" if style.language in ("id", "mixed") else "en"
     
-    for attempt in range(max_attempts):
-        is_last_attempt = (attempt == max_attempts - 1)
-        
-        async with agent.run_stream(
-            current_draft,
-            model_settings={"temperature": 1.3 + (attempt * 0.1)}  # Increase temp each retry
-        ) as result:
-            # Buffer the entire response for post-processing
-            full_text = ""
-            final_result = None
-            
-            async for partial_msg in result.stream_output():
-                final_result = partial_msg
-                if partial_msg.final_text:
-                    full_text = partial_msg.final_text
-                    
-            # Post-process the fully assembled text
-            if final_result and full_text:
-                processed_text = _apply_post_processing(full_text, style.language)
-                processed_text = _inject_short_sentences(processed_text, style.language)
-                score_lang = "id" if style.language in ("id", "mixed") else "en"
-                score = score_humanness(processed_text, lang=score_lang)
-                
-                if score.get("is_human_like", True) or is_last_attempt:
-                    final_result.final_text = processed_text
-                    
-                    # Simulate streaming the processed text
-                    chunk_size = 10
-                    for i in range(0, len(processed_text), chunk_size):
-                        chunk = processed_text[i:i+chunk_size]
-                        safe_chunk = json.dumps(chunk)
-                        yield f"event: text\ndata: {safe_chunk}\n\n"
-                        await asyncio.sleep(0.01)
-                        
-                    metrics = {
-                        "changes_made": final_result.changes_made or [],
-                        "humanness_score": score
-                    }
-                    yield f"event: metrics\ndata: {json.dumps(metrics)}\n\n"
-                    break
-                else:
-                    # Failed humanness check, rewrite with more aggressive instruction
-                    current_draft = f"""The previous rewrite FAILED the human detection test (burstiness too low: {score.get('burstiness_score', 0)}).
+    # ── PASS 1: Full rewrite ──────────────────────────────────
+    user_msg = (
+        f"Rewrite this draft to sound like a natural human wrote it. "
+        f"Keep exactly {paragraph_count} paragraphs:\n\n{clean_draft}"
+    )
+    
+    async with agent.run_stream(
+        user_msg,
+        model_settings={"temperature": 1.3}
+    ) as result:
+        full_text = ""
+        final_result = None
+        async for partial_msg in result.stream_output():
+            final_result = partial_msg
+            if partial_msg.final_text:
+                full_text = partial_msg.final_text
+    
+    if not full_text or not final_result:
+        return
+    
+    # ── POST-PROCESS ─────────────────────────────────────────
+    text = _apply_post_processing(full_text, style.language, style_mode)
+    text = _inject_short_sentences(text, style.language, style_mode)
+    
+    # ── PASS 2: Sentence-level targeted rewrite ───────────────
+    text = await _rewrite_flagged_sentences(
+        text, style.language, style_mode, agent
+    )
+    
+    # ── Light post-process again ──────────────────────────────
+    text = _apply_post_processing(text, style.language, style_mode)
+    
+    # ── Stream result ─────────────────────────────────────────
+    chunk_size = 10
+    for i in range(0, len(text), chunk_size):
+        chunk = text[i:i+chunk_size]
+        yield f"event: text\ndata: {json.dumps(chunk)}\n\n"
+        await asyncio.sleep(0.01)
+    
+    metrics = {
+        "changes_made": final_result.changes_made or [],
+    }
+    yield f"event: metrics\ndata: {json.dumps(metrics)}\n\n"
 
-CRITICAL INSTRUCTION: You MUST use EXTREME sentence length variation:
-- Include at least 3 sentences of 4 words or fewer (e.g., "Banjir melanda.", "Parah sekali.", "Tidak ada solusi.")
-- Include at least 2 sentences of 30+ words
-- Start some sentences with "Dan", "Tapi", "Nah,"
-- Use rhetorical questions
-
-Rewrite this text with {paragraph_count} paragraphs:
-
-{processed_text}"""
 
 async def apply_style(draft: str, style: StyleProfile) -> ProcessedText:
-    """Rewrite a draft to match the given StyleProfile.
-
-    Args:
-        draft: The original draft text to rewrite.
-        style: The target writing style to match.
-
-    Returns:
-        ProcessedText with final_text and changes_made.
-    """
-    # Clean input and count paragraphs
     clean_draft = _clean_input_draft(draft)
     paragraph_count = _count_paragraphs(clean_draft)
-    
     system_prompt = _build_system_prompt(style, paragraph_count)
-
+    style_mode = getattr(style, 'style_mode', 'populer')
+    score_lang = "id" if style.language in ("id", "mixed") else "en"
+    
     agent = Agent(
-        model=FallbackModel("groq:llama-3.3-70b-versatile", "groq:llama-3.1-8b-instant"),
+        model=FallbackModel(
+            "groq:llama-3.3-70b-versatile",
+            "groq:llama-3.1-8b-instant"
+        ),
         system_prompt=system_prompt,
         output_type=ProcessedText,
     )
-
-    max_attempts = 3
-    current_draft = f"Rewrite this draft to sound like a natural human wrote it. The draft has {paragraph_count} paragraphs — keep exactly {paragraph_count} paragraphs in your output:\n\n{clean_draft}"
     
-    for attempt in range(max_attempts):
-        is_last_attempt = (attempt == max_attempts - 1)
-        
-        result = await agent.run(
-            current_draft,
-            model_settings={"temperature": 1.3 + (attempt * 0.1)}
-        )
-
-        final_text = _apply_post_processing(result.output.final_text, style.language)
-        final_text = _inject_short_sentences(final_text, style.language)
-        result.output.final_text = final_text
-        
-        score_lang = "id" if style.language in ("id", "mixed") else "en"
-        score = score_humanness(final_text, lang=score_lang)
-        if score.get("is_human_like", True) or is_last_attempt:
-            return result.output
-        else:
-            current_draft = f"""The previous rewrite FAILED the human detection test (burstiness too low: {score.get('burstiness_score', 0)}).
-
-CRITICAL INSTRUCTION: You MUST use EXTREME sentence length variation:
-- Include at least 3 sentences of 4 words or fewer
-- Include at least 2 sentences of 30+ words
-- Start some sentences with "Dan", "Tapi", "Nah,"
-- Use rhetorical questions
-
-Rewrite this text with {paragraph_count} paragraphs:
-
-{final_text}"""
-            
+    user_msg = (
+        f"Rewrite this draft to sound like a natural human wrote it. "
+        f"Keep exactly {paragraph_count} paragraphs:\n\n{clean_draft}"
+    )
+    
+    result = await agent.run(user_msg, model_settings={"temperature": 1.3})
+    text = result.output.final_text
+    
+    text = _apply_post_processing(text, style.language, style_mode)
+    text = _inject_short_sentences(text, style.language, style_mode)
+    text = await _rewrite_flagged_sentences(
+        text, style.language, style_mode, agent
+    )
+    text = _apply_post_processing(text, style.language, style_mode)
+    
+    result.output.final_text = text
     return result.output
