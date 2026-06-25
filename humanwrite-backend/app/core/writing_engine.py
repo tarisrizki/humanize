@@ -184,106 +184,102 @@ def _score_sentence_ai_likeness(sentence: str, lang: str = "id") -> bool:
     return score >= 3.5
 
 
-async def _rewrite_flagged_sentences(
-    text: str, 
-    lang: str,
-    style_mode: str,
-    agent,
-    max_passes: int = 2,
-) -> str:
-    """Identify AI-flagged sentences and rewrite only those."""
-    
-    if style_mode == "akademik":
-        persona = "akademisi yang menulis dengan gaya personal namun tetap ilmiah"
-        avoid = "Hindari: 'hal ini', 'dapat disimpulkan', 'menunjukkan bahwa', 'tersebut'"
-    elif style_mode == "profesional":
-        persona = "profesional berpengalaman yang menulis ringkas dan to-the-point"
-        avoid = "Hindari: 'hal ini', 'berbagai', 'sehingga', 'tersebut', kalimat pasif berlebihan"
-    elif style_mode == "kreatif":
-        persona = "penulis kreatif dengan gaya naratif yang hidup dan emosional"
-        avoid = "Hindari: kalimat formal, struktur subjek-predikat-objek yang robotik"
-    else:  # populer
-        persona = "blogger santai yang nulis seperti ngobrol dengan teman"
-        avoid = "Hindari: 'hal ini', 'berbagai', 'merupakan', 'tersebut', kalimat pasif"
-    
-    system_prompt = f"""Kamu {persona}. Tugas kamu: tulis ulang kalimat-kalimat yang terdengar 
-seperti ditulis AI, agar terdengar natural dan manusiawi.
+def _programmatic_sentence_humanize(text: str, lang: str) -> str:
+    """Rule-based sentence transformation. No LLM — 100% reliable."""
+    if lang not in ("id", "mixed"):
+        return text
 
-{avoid}
+    # Per-sentence AI opener rules
+    opener_rules = [
+        (r'^Hal ini menunjukkan bahwa ', 'Ternyata, '),
+        (r'^Hal ini membuktikan bahwa ', 'Buktinya, '),
+        (r'^Hal ini dapat ', 'Ini bisa '),
+        (r'^Hal ini ', 'Ini '),
+        (r'^Dapat disimpulkan bahwa ', 'Intinya, '),
+        (r'^Dapat diketahui bahwa ', 'Yang jelas, '),
+        (r'^Dapat dilihat bahwa ', 'Terlihat bahwa '),
+        (r'^Perlu diketahui bahwa ', 'Perlu tahu nih, '),
+        (r'^Perlu dicatat bahwa ', 'Yang perlu dicatat, '),
+        (r'^Selain itu, ', 'Dan '),
+        (r'^Selain itu ', 'Dan '),
+        (r'^Dengan demikian, ', 'Makanya, '),
+        (r'^Dengan demikian ', 'Makanya '),
+        (r'^Oleh karena itu, ', 'Makanya, '),
+        (r'^Oleh karena itu ', 'Makanya '),
+        (r'^Berdasarkan hal tersebut', 'Dari situ'),
+        (r'^Berdasarkan ', 'Menurut '),
+        (r'^Dalam hal ini, ', 'Soal ini, '),
+        (r'^Dalam konteks ini, ', 'Di sini, '),
+        (r'^Secara keseluruhan, ', 'Singkat cerita, '),
+        (r'^Secara umum, ', 'Umumnya, '),
+        (r'^Sementara itu, ', 'Di sisi lain, '),
+        (r'^Adapun ', ''),
+        (r'^Terkait dengan ', 'Soal '),
+        (r'^Melalui ', 'Lewat '),
+        (r'^Untuk mencapai ', 'Buat mencapai '),
+    ]
 
-ATURAN:
-- Ganti kalimat yang dimulai dengan kata AI-typical
-- Pecah kalimat panjang seragam menjadi variasi pendek+panjang
-- Tambahkan pertanyaan retoris atau ekspresi personal jika sesuai
-- Pertahankan makna aslinya
-- HANYA kembalikan kalimat yang sudah ditulis ulang, 
-  dengan format yang sama persis (nomor. kalimat)"""
-    
-    from pydantic_ai import Agent as SimpleAgent
-    from pydantic_ai.models.fallback import FallbackModel
-    
-    plain_agent = SimpleAgent(
-        model=FallbackModel(
-            "groq:llama-3.3-70b-versatile", 
-            "groq:llama-3.1-8b-instant"
-        ),
-        system_prompt=system_prompt,
-    )
-    
-    for pass_num in range(max_passes):
-        # Split preserving paragraph structure
-        paragraphs = text.split('\n')
-        changed = False
-        
-        for p_idx, para in enumerate(paragraphs):
-            if not para.strip():
+    # Word-level replacements (applied after opener rules)
+    word_rules = [
+        (r'\btersebut\b', 'itu'),
+        (r'\bmenunjukkan bahwa\b', 'membuktikan'),
+        (r'\bdapat disimpulkan\b', 'bisa dibilang'),
+        (r'\bsangat penting\b', 'krusial'),
+    ]
+
+    paragraphs = text.split('\n')
+    result_paragraphs = []
+
+    for para in paragraphs:
+        if not para.strip():
+            result_paragraphs.append(para)
+            continue
+
+        sentences = re.split(r'(?<=[.!?])\s+', para.strip())
+        new_sentences = []
+
+        for sent in sentences:
+            s = sent.strip()
+            if not s:
                 continue
-            
-            sentences = re.split(r'(?<=[.!?])\s+', para.strip())
-            flagged = [
-                (i, s) for i, s in enumerate(sentences)
-                if _score_sentence_ai_likeness(s, lang) and len(s.split()) > 4
-            ]
-            
-            if not flagged:
-                continue
-            
-            # Build rewrite request for this paragraph's flagged sentences
-            input_lines = "\n".join([
-                f"{i+1}. {s}" for i, s in flagged
-            ])
-            
-            try:
-                result = await plain_agent.run(
-                    f"Tulis ulang kalimat-kalimat ini:\n\n{input_lines}",
-                    model_settings={"temperature": 1.4}
-                )
-                output = result.output if isinstance(result.output, str) else str(result.output)
-                
-                # Parse numbered output
-                rewrites = {}
-                for line in output.strip().split('\n'):
-                    m = re.match(r'^(\d+)\.\s+(.+)$', line.strip())
-                    if m:
-                        rewrites[int(m.group(1)) - 1] = m.group(2).strip()
-                
-                # Apply rewrites
-                for orig_idx, _ in flagged:
-                    if orig_idx in rewrites and rewrites[orig_idx]:
-                        sentences[orig_idx] = rewrites[orig_idx]
-                        changed = True
-                        
-                paragraphs[p_idx] = ' '.join(sentences)
-                
-            except Exception:
-                continue  # Skip if rewrite fails, keep original
-        
-        text = '\n'.join(paragraphs)
-        
-        if not changed:
-            break
-    
-    return text
+
+            # Apply opener rule (first match wins)
+            for pattern, replacement in opener_rules:
+                new_s = re.sub(pattern, replacement, s, count=1, flags=re.IGNORECASE)
+                if new_s != s:
+                    # Re-capitalize
+                    s = new_s[0].upper() + new_s[1:] if new_s else new_s
+                    break
+
+            # Apply word rules
+            for pattern, replacement in word_rules:
+                s = re.sub(pattern, replacement, s, flags=re.IGNORECASE)
+
+            # Split very long sentence at "sehingga"
+            if len(s.split()) > 22:
+                parts = re.split(r'\bsehingga\b', s, maxsplit=1, flags=re.IGNORECASE)
+                if len(parts) == 2:
+                    p0 = parts[0].strip().rstrip(',')
+                    p1 = parts[1].strip()
+                    if len(p0.split()) > 5 and len(p1.split()) > 3:
+                        p1 = p1[0].upper() + p1[1:]
+                        s = p0 + '. ' + p1
+
+            # Split very long sentence at "yang mana"
+            if len(s.split()) > 22:
+                parts = re.split(r'\byang mana\b', s, maxsplit=1, flags=re.IGNORECASE)
+                if len(parts) == 2:
+                    p0 = parts[0].strip().rstrip(',')
+                    p1 = parts[1].strip()
+                    if len(p0.split()) > 5 and len(p1.split()) > 3:
+                        p1 = p1[0].upper() + p1[1:]
+                        s = p0 + '. ' + p1
+
+            new_sentences.append(s)
+
+        result_paragraphs.append(' '.join(new_sentences))
+
+    return '\n'.join(result_paragraphs)
 
 
 def _inject_short_sentences(text: str, lang: str, style_mode: str = "populer") -> str:
@@ -447,9 +443,7 @@ async def apply_style_stream(draft: str, style: StyleProfile) -> AsyncGenerator[
     text = _inject_short_sentences(text, style.language, style_mode)
     
     # ── PASS 2: Sentence-level targeted rewrite ───────────────
-    text = await _rewrite_flagged_sentences(
-        text, style.language, style_mode, agent
-    )
+    text = _programmatic_sentence_humanize(text, style.language)
     
     # ── Light post-process again ──────────────────────────────
     text = _apply_post_processing(text, style.language, style_mode)
@@ -493,9 +487,7 @@ async def apply_style(draft: str, style: StyleProfile) -> ProcessedText:
     
     text = _apply_post_processing(text, style.language, style_mode)
     text = _inject_short_sentences(text, style.language, style_mode)
-    text = await _rewrite_flagged_sentences(
-        text, style.language, style_mode, agent
-    )
+    text = _programmatic_sentence_humanize(text, style.language)
     text = _apply_post_processing(text, style.language, style_mode)
     
     result.output.final_text = text
