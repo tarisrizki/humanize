@@ -234,6 +234,13 @@ if profile:
 st.markdown("### Paste Your LLM-Generated Draft")
 st.caption("Enter the AI-generated text you want to rewrite using our pre-trained Human Style.")
 
+style_mode_options = ["populer", "akademik", "profesional", "kreatif"]
+style_mode_val = st.selectbox(
+    "Select Style Mode",
+    options=style_mode_options,
+    index=0,
+)
+
 draft_text = st.text_area(
     "Draft text",
     height=250,
@@ -283,7 +290,7 @@ if humanize_btn and draft_text:
         try:
             process_resp = requests.post(
                 f"{BACKEND_URL}/api/v1/process",
-                json={"draft": draft_text},
+                json={"draft": draft_text, "style_mode": style_mode_val},
                 stream=True,
                 timeout=120,
             )

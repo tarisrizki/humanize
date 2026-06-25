@@ -43,6 +43,7 @@ async def process_draft(request: ProcessRequest) -> StreamingResponse:
     # Load the style profile
     try:
         profile_data = load_json(profile_path)
+        profile_data["style_mode"] = request.style_mode
         style = StyleProfile(**profile_data)
     except Exception as e:
         raise HTTPException(

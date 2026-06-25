@@ -11,6 +11,10 @@ class StyleProfile(BaseModel):
         default="en",
         description="Detected primary language: 'en', 'id', or 'mixed'",
     )
+    style_mode: str = Field(
+        default="populer",
+        description="Target writing style mode: akademik, profesional, kreatif, populer",
+    )
 
     # Sentence-level metrics
     avg_sentence_length: float = Field(
