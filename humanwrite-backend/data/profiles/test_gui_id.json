@@ -1,0 +1,16 @@
+{
+  "user_id": "test_gui_id",
+  "language": "id",
+  "avg_sentence_length": 5.5,
+  "sentence_length_std": 2.12,
+  "flesch_reading_ease": 55.13,
+  "active_voice_ratio": 1.0,
+  "top_transitions": [
+    "namun"
+  ],
+  "hedging_frequency": 0.0,
+  "emotion_register": "neutral",
+  "favorite_phrases": [],
+  "lexical_diversity": 1.0,
+  "paragraph_length_avg": 2.0
+}

@@ -1,0 +1,16 @@
+{
+  "user_id": "test_gui_en",
+  "language": "en",
+  "avg_sentence_length": 7.5,
+  "sentence_length_std": 2.12,
+  "flesch_reading_ease": 80.78,
+  "active_voice_ratio": 1.0,
+  "top_transitions": [
+    "furthermore"
+  ],
+  "hedging_frequency": 0.5,
+  "emotion_register": "neutral",
+  "favorite_phrases": [],
+  "lexical_diversity": 0.9333,
+  "paragraph_length_avg": 2.0
+}
