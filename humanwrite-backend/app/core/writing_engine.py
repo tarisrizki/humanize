@@ -148,9 +148,15 @@ oleh detektor AI seperti GPTZero.
    panjang (≥20 kata). Variasi ini krusial.
 4. JANGAN mulai dua kalimat berturut dengan kata yang sama.
 5. JANGAN gunakan struktur paralel berulang.
-6. Tambahkan pertanyaan retoris atau observasi personal 
-   yang sesuai register.
-7. Output HARUS persis {paragraph_count} paragraf.
+6. JANGAN tambah kalimat baru yang tidak ada di draf asli.
+   Kalimat pertanyaan atau observasi HANYA boleh jika 
+   memang ada di draf asli dan hanya diparafrasekan.
+7. STRUKTUR PARAGRAF WAJIB DIPERTAHANKAN:
+   - Draf asli punya {paragraph_count} paragraf.
+   - Output HARUS punya PERSIS {paragraph_count} paragraf.
+   - Setiap paragraf dipisahkan dengan baris kosong.
+   - JANGAN gabungkan atau pisahkan paragraf.
+   - Ini adalah aturan TIDAK BOLEH DILANGGAR.
 8. Catat semua perubahan signifikan di changes_made.
 """
 
@@ -376,7 +382,7 @@ def _inject_short_sentences(text: str, lang: str, style_mode: str = "populer") -
         new_sentences = []
         for sent in sentences:
             new_sentences.append(sent)
-            if len(sent.split()) > 15 and random.random() < 0.30:
+            if len(sent.split()) > 20 and random.random() < 0.10:
                 new_sentences.append(random.choice(short_list))
         result.append(' '.join(new_sentences))
     return '\n'.join(result)
@@ -527,6 +533,52 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
 # Set API key at module level
 os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
 
+def _validate_paragraph_count(
+    text: str, 
+    expected: int, 
+    original_draft: str
+) -> str:
+    """
+    Jika Groq menghasilkan paragraf yang salah jumlah,
+    coba recover dengan membagi ulang berdasarkan 
+    jumlah kalimat yang proporsional.
+    """
+    actual_paras = [p.strip() for p in text.split('\n\n') if p.strip()]
+    if len(actual_paras) == expected:
+        return text  # ✅ Sudah benar
+    
+    # Fallback: jika hasilnya 1 paragraf tapi harusnya >1,
+    # bagi berdasarkan kalimat
+    if len(actual_paras) == 1 and expected > 1:
+        # Hitung berapa kalimat per paragraf asli
+        orig_paras = [p.strip() for p in original_draft.split('\n\n') if p.strip()]
+        all_sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+        
+        # Bagi kalimat secara proporsional
+        orig_sent_counts = []
+        for op in orig_paras:
+            count = len(re.split(r'(?<=[.!?])\s+', op.strip()))
+            orig_sent_counts.append(max(1, count))
+        
+        total_orig = sum(orig_sent_counts)
+        total_new = len(all_sentences)
+        
+        result_paras = []
+        idx = 0
+        for i, orig_count in enumerate(orig_sent_counts):
+            if i == len(orig_sent_counts) - 1:
+                # Paragraf terakhir: ambil sisa semua
+                result_paras.append(' '.join(all_sentences[idx:]))
+            else:
+                # Proporsi kalimat
+                take = max(1, round(orig_count / total_orig * total_new))
+                result_paras.append(' '.join(all_sentences[idx:idx+take]))
+                idx += take
+        
+        return '\n\n'.join(result_paras)
+    
+    return text  # Biarkan jika tidak bisa di-recover
+
 async def apply_style_stream(draft: str, style: StyleProfile) -> AsyncGenerator[str, None]:
     clean_draft = _clean_input_draft(draft)
     paragraph_count = _count_paragraphs(clean_draft)
@@ -576,6 +628,7 @@ async def apply_style_stream(draft: str, style: StyleProfile) -> AsyncGenerator[
     
     # ── Light post-process again ──────────────────────────────
     text = _apply_post_processing(text, style.language, style_mode)
+    text = _validate_paragraph_count(text, paragraph_count, clean_draft)
     
     # ── Stream result ─────────────────────────────────────────
     chunk_size = 10
@@ -621,6 +674,7 @@ async def apply_style(draft: str, style: StyleProfile) -> ProcessedText:
     text = _inject_short_sentences(text, style.language, style_mode)
     text = _programmatic_sentence_humanize(text, style.language, style_mode)
     text = _apply_post_processing(text, style.language, style_mode)
+    text = _validate_paragraph_count(text, paragraph_count, clean_draft)
     
     result.output.final_text = text
     return result.output
