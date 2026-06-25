@@ -47,5 +47,5 @@ def test_process_no_profile(client):
         profile_path.unlink()
         
     response = client.post("/api/v1/process", json={"draft": "Draft"})
-    assert response.status_code == 500
-    assert "Global style profile not found" in response.json()["detail"]
+    assert response.status_code == 503
+    assert "Style profile not found" in response.json()["detail"]

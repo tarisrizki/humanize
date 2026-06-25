@@ -12,15 +12,16 @@ router = APIRouter()
 
 
 @router.get("/style", response_model=StyleProfile)
-async def get_global_style() -> StyleProfile:
+async def get_global_style(mode: str = "populer") -> StyleProfile:
     """Return the pre-trained Global StyleProfile."""
-    profile_path = settings.profiles_path / "global_style.json"
+    profile_path = settings.profiles_path / f"{mode}_style.json"
     if not profile_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Global style profile not found.",
-        )
-    return StyleProfile(**load_json(profile_path))
+        profile_path = settings.profiles_path / "global_style.json"
+    if not profile_path.exists():
+        raise HTTPException(status_code=404, detail="Style profile not found.")
+    data = load_json(profile_path)
+    data["style_mode"] = mode
+    return StyleProfile(**data)
 
 from fastapi.responses import StreamingResponse
 from app.core.writing_engine import apply_style, apply_style_stream
@@ -31,13 +32,16 @@ async def process_draft(request: ProcessRequest) -> StreamingResponse:
 
     Requires that the global style has been trained offline.
     """
-    profile_path = settings.profiles_path / "global_style.json"
-
+    mode = request.style_mode or "populer"
+    profile_path = settings.profiles_path / f"{mode}_style.json"
+    
+    if not profile_path.exists():
+        profile_path = settings.profiles_path / "global_style.json"
+        
     if not profile_path.exists():
         raise HTTPException(
-            status_code=500,
-            detail="Global style profile not found. "
-            "Please run the offline training script first.",
+            status_code=503,
+            detail="Style profile not found. Run training script first.",
         )
 
     # Load the style profile

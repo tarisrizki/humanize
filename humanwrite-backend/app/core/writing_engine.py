@@ -283,13 +283,35 @@ def _programmatic_sentence_humanize(text: str, lang: str) -> str:
 
 
 def _inject_short_sentences(text: str, lang: str, style_mode: str = "populer") -> str:
-    if lang in ("id", "mixed"):
-        short_injects = ["Parah.", "Serius.", "Pusing.", 
-            "Gila sih.", "Capek banget.", "Aneh emang.", 
-            "Nggak masuk akal.", "Ribet.", "Makanya."]
-    else:
-        short_injects = ["Seriously.", "Wild.", "For real.",
-            "Crazy.", "No joke.", "Right?", "Exactly."]
+    injects = {
+        "akademik": {
+            "id": ["Menariknya.", "Perlu dicatat.", 
+                   "Ini krusial.", "Patut diperhatikan."],
+            "en": ["Notably.", "Worth noting.", 
+                   "This matters.", "Interestingly."]
+        },
+        "profesional": {
+            "id": ["Faktanya.", "Singkat kata.", 
+                   "Konkretnya.", "Perlu diperhatikan."],
+            "en": ["In fact.", "Simply put.", 
+                   "Concretely.", "Worth noting."]
+        },
+        "kreatif": {
+            "id": ["Diam.", "Sunyi.", "Tiba-tiba.", 
+                   "Aneh.", "Betul juga."],
+            "en": ["Silence.", "Strange.", 
+                   "Suddenly.", "Indeed."]
+        },
+        "populer": {
+            "id": ["Parah.", "Serius.", "Gila sih.", 
+                   "Capek banget.", "Ribet.", "Makanya."],
+            "en": ["Seriously.", "Wild.", "For real.", 
+                   "Crazy.", "No joke."]
+        }
+    }
+    lang_key = "id" if lang in ("id", "mixed") else "en"
+    short_list = injects.get(style_mode, injects["populer"])[lang_key]
+    
     paragraphs = text.split('\n')
     result = []
     for para in paragraphs:
@@ -301,7 +323,7 @@ def _inject_short_sentences(text: str, lang: str, style_mode: str = "populer") -
         for sent in sentences:
             new_sentences.append(sent)
             if len(sent.split()) > 15 and random.random() < 0.30:
-                new_sentences.append(random.choice(short_injects))
+                new_sentences.append(random.choice(short_list))
         result.append(' '.join(new_sentences))
     return '\n'.join(result)
 
