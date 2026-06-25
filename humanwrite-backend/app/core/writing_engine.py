@@ -129,6 +129,30 @@ COMPLETELY UNDETECTABLE by AI detection tools like GPTZero, Originality.ai, and 
 """
 
 
+def _inject_short_sentences(text: str, lang: str) -> str:
+    if lang in ("id", "mixed"):
+        short_injects = ["Parah.", "Serius.", "Pusing.", 
+            "Gila sih.", "Capek banget.", "Aneh emang.", 
+            "Nggak masuk akal.", "Ribet.", "Makanya."]
+    else:
+        short_injects = ["Seriously.", "Wild.", "For real.",
+            "Crazy.", "No joke.", "Right?", "Exactly."]
+    paragraphs = text.split('\n')
+    result = []
+    for para in paragraphs:
+        if not para.strip():
+            result.append(para)
+            continue
+        sentences = re.split(r'(?<=[.!?])\s+', para.strip())
+        new_sentences = []
+        for sent in sentences:
+            new_sentences.append(sent)
+            if len(sent.split()) > 15 and random.random() < 0.30:
+                new_sentences.append(random.choice(short_injects))
+        result.append(' '.join(new_sentences))
+    return '\n'.join(result)
+
+
 def _apply_post_processing(text: str, lang: str) -> str:
     """Apply aggressive post-processing to break AI detection patterns."""
     if not text:
@@ -158,7 +182,8 @@ def _apply_post_processing(text: str, lang: str) -> str:
             (r"(?i)\bmerupakan\b", "itu"),
             (r"(?i)\badalah\b", "itu"),
             (r"(?i)\bmemiliki\b", "punya"),
-            (r"(?i)\bberbagai\b", "macam-macam"),
+            (r"(?i)\bberbagai macam\b", "banyak"),
+            (r"(?i)\bberbagai\b", "banyak"),
             (r"(?i)\bmelalui\b", "lewat"),
             (r"(?i)\bdalam hal ini\b", "soal ini"),
             (r"(?i)\bhal ini\b", "ini"),
@@ -267,6 +292,7 @@ async def apply_style_stream(draft: str, style: StyleProfile) -> AsyncGenerator[
             # Post-process the fully assembled text
             if final_result and full_text:
                 processed_text = _apply_post_processing(full_text, style.language)
+                processed_text = _inject_short_sentences(processed_text, style.language)
                 score_lang = "id" if style.language in ("id", "mixed") else "en"
                 score = score_humanness(processed_text, lang=score_lang)
                 
@@ -335,6 +361,7 @@ async def apply_style(draft: str, style: StyleProfile) -> ProcessedText:
         )
 
         final_text = _apply_post_processing(result.output.final_text, style.language)
+        final_text = _inject_short_sentences(final_text, style.language)
         result.output.final_text = final_text
         
         score_lang = "id" if style.language in ("id", "mixed") else "en"

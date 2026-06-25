@@ -46,6 +46,6 @@ def score_humanness(text: str, lang: str = "id") -> dict:
         "sentence_count": len(sent_lengths),
         "has_short_sentences": has_short,
         "has_long_sentences": has_long,
-        # Threshold: burstiness >= 8.0 DAN ada variasi ekstrem
-        "is_human_like": burstiness >= 8.0 and has_short and has_long,
+        # Threshold: burstiness >= 3.0 DAN ada variasi ekstrem
+        "is_human_like": burstiness >= 3.0 and has_short,
     }
