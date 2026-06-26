@@ -355,23 +355,7 @@ with tab1:
                 if eval_resp.status_code == 200:
                     st.session_state["last_record_id"] = eval_resp.json().get("record_id")
 
-                st.markdown("### 🔍 Menganalisis Kualitas (Tahap 2)...")
-                with st.spinner("LLM Judge sedang mengevaluasi Output A... (Estimasi 10-30 detik)"):
-                    enhance_resp = requests.post(
-                        f"{BACKEND_URL}/api/v1/process/enhance",
-                        json={
-                            "record_id": st.session_state.get("last_record_id"),
-                            "original_text": draft_text,
-                            "standard_output": final_text,
-                            "style_mode": style_mode_val,
-                            "language": profile.get("language", "id")
-                        },
-                        timeout=90
-                    )
-                    if enhance_resp.status_code == 200:
-                        st.session_state["enhanced_result"] = enhance_resp.json()
-                    else:
-                        st.warning("Gagal memproses peningkatan tahap 2.")
+
                         
             except Exception as e:
                 st.error(f"Proses gagal: {e}")
@@ -382,62 +366,30 @@ with tab1:
         original_draft = st.session_state.get("last_draft", "")
         metrics = st.session_state.get("last_metrics") or {}
         changes = metrics.get("changes_made", [])
-        enhanced_data = st.session_state.get("enhanced_result")
-
         st.markdown("---")
         
         # Word count
         word_count_orig = len(original_draft.split())
         st.caption(f"**Jumlah Kata Asli:** {word_count_orig}")
 
-        out_tab1, out_tab2 = st.tabs(["📄 Output A (Standard)", "✨ Output B (Judge Enhanced)"])
+        st.markdown(f"**Jumlah Kata Hasil:** {len(final_text.split())}")
+        st.text_area("Hasil Output", final_text, height=300, disabled=True)
         
-        with out_tab1:
-            st.markdown(f"**Jumlah Kata:** {len(final_text.split())}")
-            st.text_area("Hasil Output A", final_text, height=300, disabled=True)
+        st.download_button(
+            label="📄 Download Output (.txt)",
+            data=final_text,
+            file_name=f"output_{int(time.time())}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+
+        with st.expander("🔀 Tampilan Diff (Output vs Asli)", expanded=False):
+            st.markdown(render_diff(original_draft, final_text), unsafe_allow_html=True)
             
-            st.download_button(
-                label="📄 Download Output A (.txt)",
-                data=final_text,
-                file_name=f"output_a_{int(time.time())}.txt",
-                mime="text/plain",
-                use_container_width=True,
-            )
-
-            with st.expander("🔀 Tampilan Diff (Output A vs Asli)", expanded=False):
-                st.markdown(render_diff(original_draft, final_text), unsafe_allow_html=True)
-                
-            if changes:
-                with st.expander("📋 Perubahan yang Dilakukan (Pass 1 & 2)", expanded=False):
-                    for change in changes:
-                        st.markdown(f'<div class="change-item">💡 {change}</div>', unsafe_allow_html=True)
-
-        with out_tab2:
-            if enhanced_data:
-                enh_text = enhanced_data["enhanced_text"]
-                improved = enhanced_data["improved"]
-                
-                st.markdown(f"**Jumlah Kata:** {len(enh_text.split())}")
-                if improved:
-                    st.success(f"Ditingkatkan dari skor Judge **{enhanced_data['judge_score_before']}** ke **{enhanced_data['judge_score_after']}**")
-                    st.caption(f"Karena Pass 3 memperbaiki kalimat: *\"{enhanced_data['worst_sentence']}\"*")
-                else:
-                    st.info(f"Skor Standard sudah bagus (**{enhanced_data['judge_score_before']}**). Tidak ada perubahan tambahan dari Pass 3.")
-                    
-                st.text_area("Hasil Output B", enh_text, height=300, disabled=True)
-                
-                st.download_button(
-                    label="📄 Download Output B (.txt)",
-                    data=enh_text,
-                    file_name=f"output_b_{int(time.time())}.txt",
-                    mime="text/plain",
-                    use_container_width=True,
-                )
-
-                with st.expander("🔀 Tampilan Diff (Output B vs Asli)", expanded=False):
-                    st.markdown(render_diff(original_draft, enh_text), unsafe_allow_html=True)
-            else:
-                st.warning("Data Output B tidak tersedia.")
+        if changes:
+            with st.expander("📋 Perubahan yang Dilakukan", expanded=False):
+                for change in changes:
+                    st.markdown(f'<div class="change-item">💡 {change}</div>', unsafe_allow_html=True)
 
         # ── Evaluasi (Dipindah dari Tab 2) ────────────────────────────────────
         st.markdown("---")
@@ -494,8 +446,14 @@ with tab1:
         st.markdown("---")
         st.markdown("#### 🛡️ Turnitin Safety")
 
-        if st.session_state.get("enhanced_result"):
-            trigram_overlap = st.session_state["enhanced_result"].get("trigram_overlap", 0)
+        if "last_record_id" in st.session_state:
+            # Hitung overlap lokal jika endpoint evaluasi belum menghitung
+            try:
+                from app.core.writing_engine import check_trigram_overlap
+                trigram_overlap = check_trigram_overlap(original_draft, final_text)
+            except Exception:
+                trigram_overlap = metrics.get("trigram_overlap", 0) if metrics else 0
+
             overlap_pct = int(trigram_overlap * 100)
 
             if overlap_pct < 15:
@@ -535,14 +493,14 @@ with tab1:
             with col_a3:
                 gptzero_std_human = st.number_input("Standard Human (%)", min_value=0, max_value=100, value=100)
                 
-            st.markdown("**Output B (Enhanced)**")
+            st.markdown("**Output (Humanized)**")
             col_b1, col_b2, col_b3 = st.columns(3)
             with col_b1:
-                gptzero_enh_ai = st.number_input("Enhanced AI (%)", min_value=0, max_value=100, value=0)
+                gptzero_enh_ai = st.number_input("Humanized AI (%)", min_value=0, max_value=100, value=0)
             with col_b2:
-                gptzero_enh_mixed = st.number_input("Enhanced Mixed (%)", min_value=0, max_value=100, value=0)
+                gptzero_enh_mixed = st.number_input("Humanized Mixed (%)", min_value=0, max_value=100, value=0)
             with col_b3:
-                gptzero_enh_human = st.number_input("Enhanced Human (%)", min_value=0, max_value=100, value=100)
+                gptzero_enh_human = st.number_input("Humanized Human (%)", min_value=0, max_value=100, value=100)
             
             submitted = st.form_submit_button("Simpan Skor Anti-Deteksi")
             if submitted:
@@ -551,9 +509,6 @@ with tab1:
                         f"{BACKEND_URL}/api/v1/evaluate/gptzero",
                         json={
                             "record_id": st.session_state['last_record_id'],
-                            "gptzero_std_ai": gptzero_std_ai,
-                            "gptzero_std_mixed": gptzero_std_mixed,
-                            "gptzero_std_human": gptzero_std_human,
                             "gptzero_enh_ai": gptzero_enh_ai,
                             "gptzero_enh_mixed": gptzero_enh_mixed,
                             "gptzero_enh_human": gptzero_enh_human
