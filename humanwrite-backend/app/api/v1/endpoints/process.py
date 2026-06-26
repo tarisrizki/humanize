@@ -99,6 +99,7 @@ async def enhance_output(request: EnhanceRequest):
         _clean_input_draft,
         _count_paragraphs,
         _build_system_prompt,
+        _strip_meta_commentary,
     )
     from app.storage.json_store import load_style_profile
     from pydantic_ai import Agent
@@ -142,6 +143,14 @@ async def enhance_output(request: EnhanceRequest):
         )
 
         pass3_msg = (
+            f"TUGAS: Tulis ulang teks berikut.\n"
+            f"ATURAN MUTLAK:\n"
+            f"- Output HANYA teks yang sudah diubah\n"
+            f"- DILARANG menulis penjelasan, catatan, "
+            f"  atau daftar perubahan apapun\n"
+            f"- DILARANG menulis kalimat seperti "
+            f"  'berikut teks ulang' atau 'perubahan yang dilakukan'\n"
+            f"- Langsung mulai dengan kalimat pertama teks\n\n"
             f"Teks berikut mendapat skor {score_before}/100 "
             f"dari evaluator karena kalimat ini masih terasa AI:\n"
             f"\"{worst_sentence}\"\n\n"
@@ -157,6 +166,7 @@ async def enhance_output(request: EnhanceRequest):
                 model_settings={"temperature": 1.0},
             )
             enhanced_raw = str(result3.output).strip()
+            enhanced_raw = _strip_meta_commentary(enhanced_raw)
         except Exception:
             enhanced_raw = request.standard_output
 

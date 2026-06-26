@@ -287,9 +287,8 @@ if profile:
 if not profile and backend_online:
     st.error("Global Style Profile tidak ditemukan. Harap jalankan script training di backend.")
 
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2 = st.tabs([
     "✍️ Humanize", 
-    "📊 Evaluasi", 
     "📜 History"
 ])
 
@@ -440,12 +439,9 @@ with tab1:
             else:
                 st.warning("Data Output B tidak tersedia.")
 
-# ── Tab 2: Evaluasi ───────────────────────────────────────────────────────────
-with tab2:
-    st.markdown("### 🤖 Evaluasi LLM Judge & Anti-Deteksi")
-    if "last_record_id" in st.session_state and st.session_state.get("last_result"):
-        original_draft = st.session_state.get("last_draft", "")
-        final_text = st.session_state.get("last_result", "")
+        # ── Evaluasi (Dipindah dari Tab 2) ────────────────────────────────────
+        st.markdown("---")
+        st.markdown("### 🤖 Evaluasi LLM Judge & Anti-Deteksi")
         
         # LLM Judge
         st.markdown("#### ⚖️ LLM as a Judge")
@@ -568,12 +564,9 @@ with tab2:
                     st.success("Skor GPTZero berhasil diperbarui!")
                 except Exception as e:
                     st.error(f"Gagal menyimpan skor GPTZero: {e}")
-    else:
-        st.info("Anda belum melakukan proses Humanize. Silakan gunakan tab 'Humanize' terlebih dahulu.")
 
-
-# ── Tab 3: History ────────────────────────────────────────────────────────────
-with tab3:
+# ── Tab 2: History ────────────────────────────────────────────────────────────
+with tab2:
     st.markdown("### 📜 Riwayat Evaluasi")
     st.caption("Daftar lengkap hasil proses dan evaluasi yang pernah dijalankan.")
     

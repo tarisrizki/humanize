@@ -593,6 +593,76 @@ def _needs_rewrite(overlap: float, threshold: float = 0.30) -> bool:
     """
     return overlap > threshold
 
+def _strip_meta_commentary(text: str) -> str:
+    """
+    Hapus meta-commentary yang sering ditambahkan Groq:
+    - Paragraf penjelasan di awal (sebelum teks asli)
+    - Bullet point daftar perubahan di akhir
+    - Kalimat transisi model tentang apa yang dilakukannya
+    """
+    lines = text.strip().split('\n')
+    
+    # Pola kalimat meta yang harus dihapus
+    meta_patterns = [
+        r'^teks di atas',
+        r'^teks berikut',
+        r'^berikut adalah teks',
+        r'^berikut teks',
+        r'^perubahan utama',
+        r'^perubahan yang dilakukan',
+        r'^dengan begitu',
+        r'^demikianlah',
+        r'^catatan:',
+        r'^note:',
+        r'^\*\s+mengganti',
+        r'^\*\s+mengubah',
+        r'^\-\s+mengganti',
+        r'^\-\s+mengubah',
+        r'^teks ulang sudah',
+        r'^hasil teks ulang',
+        r'^tapi berikut',
+        r'^di bawah ini',
+    ]
+    
+    cleaned_lines = []
+    skip_bullet_section = False
+    
+    for line in lines:
+        stripped = line.strip().lower()
+        
+        # Deteksi awal seksi bullet points
+        if re.match(r'^perubahan', stripped) or \
+           re.match(r'^catatan', stripped) or \
+           re.match(r'^note:', stripped):
+            skip_bullet_section = True
+            continue
+        
+        # Skip bullet points
+        if skip_bullet_section and (
+            line.strip().startswith('*') or 
+            line.strip().startswith('-') or
+            line.strip().startswith('•')
+        ):
+            continue
+        
+        # Reset skip jika ada paragraf normal lagi
+        if skip_bullet_section and len(line.strip()) > 50 and \
+           not line.strip().startswith(('*', '-', '•')):
+            skip_bullet_section = False
+        
+        # Cek apakah baris ini adalah meta-commentary
+        is_meta = any(
+            re.match(p, stripped) 
+            for p in meta_patterns
+        )
+        
+        if not is_meta:
+            cleaned_lines.append(line)
+    
+    result = '\n'.join(cleaned_lines).strip()
+    return result if result else text
+
+
 def _validate_output_quality(
     text: str,
     original: str,
@@ -619,6 +689,28 @@ def _validate_output_quality(
         return True
     overlap = len(orig_words & new_words) / len(orig_words)
     if overlap < min_overlap:
+        return False
+
+    # Tolak output yang mengandung meta-commentary
+    text_lower = text.lower()
+    meta_signals = [
+        "perubahan utama",
+        "perubahan yang dilakukan",
+        "teks di atas masih",
+        "berikut adalah teks ulang",
+        "teks ulang sudah mengalami",
+        "dengan begitu, teks ulang",
+        "mengganti kalimat",
+    ]
+    if any(signal in text_lower for signal in meta_signals):
+        return False
+
+    # Tolak output yang mengandung terlalu banyak bullet points
+    bullet_lines = sum(
+        1 for l in text.split('\n')
+        if l.strip().startswith(('* ', '- ', '• '))
+    )
+    if bullet_lines > 3:
         return False
 
     return True
@@ -784,6 +876,9 @@ async def apply_style_stream(
     except Exception as e:
         full_text = ""
 
+    # Bersihkan meta-commentary sebelum validasi
+    full_text = _strip_meta_commentary(full_text)
+
     # Validasi output Groq sebelum post-processing
     if not _validate_output_quality(full_text, clean_draft):
         # Output tidak layak — retry dengan temperature lebih rendah
@@ -796,6 +891,7 @@ async def apply_style_stream(
                 timeout=60.0
             )
             retry_text = str(result_retry.output).strip() if result_retry.output else ""
+            retry_text = _strip_meta_commentary(retry_text)
             if _validate_output_quality(retry_text, clean_draft):
                 full_text = retry_text
             else:
@@ -820,13 +916,18 @@ async def apply_style_stream(
         # Overlap terlalu tinggi → minta Groq rewrite lagi
         # dengan instruksi structural yang lebih agresif
         pass2_msg = (
-            f"Teks berikut masih memiliki {trigram_overlap:.0%} kesamaan "
-            f"struktural dengan draf asli. "
-            f"Tulis ulang SELURUH teks dengan mengubah struktur setiap "
-            f"kalimat secara fundamental — ubah urutan subjek-predikat-objek, "
-            f"gabungkan atau pecah kalimat, ubah aktif ke pasif atau sebaliknya. "
-            f"TIDAK BOLEH ada 3 kata berurutan yang sama dengan versi ini.\n\n"
-            f"{text}"
+            f"TUGAS: Tulis ulang teks berikut.\n"
+            f"ATURAN MUTLAK:\n"
+            f"- Output HANYA teks yang sudah diubah\n"
+            f"- DILARANG menulis penjelasan, catatan, "
+            f"  atau daftar perubahan apapun\n"
+            f"- DILARANG menulis kalimat seperti "
+            f"  'berikut teks ulang' atau 'perubahan yang dilakukan'\n"
+            f"- Langsung mulai dengan kalimat pertama teks\n\n"
+            f"FOKUS: Ubah struktur kalimat secara fundamental. "
+            f"Tidak boleh ada 3 kata berurutan yang sama. "
+            f"Pertahankan {paragraph_count} paragraf.\n\n"
+            f"TEKS YANG HARUS DITULIS ULANG:\n{text}"
         )
         try:
             result2 = await asyncio.wait_for(
@@ -837,6 +938,7 @@ async def apply_style_stream(
                 timeout=60.0
             )
             text2 = str(result2.output).strip() if result2.output else ""
+            text2 = _strip_meta_commentary(text2)
             if text2:
                 text2 = _apply_post_processing(text2, style.language, style_mode)
                 text2 = _programmatic_sentence_humanize(text2, style.language, style_mode)
@@ -907,6 +1009,9 @@ async def apply_style(
     except Exception:
         full_text = draft  # fallback ke draf asli
 
+    # Bersihkan meta-commentary sebelum validasi
+    full_text = _strip_meta_commentary(full_text)
+
     # Validasi output Groq sebelum post-processing
     if not _validate_output_quality(full_text, clean_draft):
         # Output tidak layak — retry dengan temperature lebih rendah
@@ -919,6 +1024,7 @@ async def apply_style(
                 timeout=60.0
             )
             retry_text = str(result_retry.output).strip() if result_retry.output else ""
+            retry_text = _strip_meta_commentary(retry_text)
             if _validate_output_quality(retry_text, clean_draft):
                 full_text = retry_text
             else:
@@ -937,13 +1043,18 @@ async def apply_style(
 
     if _needs_rewrite(trigram_overlap, threshold=0.30):
         pass2_msg = (
-            f"Teks berikut masih memiliki {trigram_overlap:.0%} kesamaan "
-            f"struktural dengan draf asli. "
-            f"Tulis ulang SELURUH teks dengan mengubah struktur setiap "
-            f"kalimat secara fundamental — ubah urutan subjek-predikat-objek, "
-            f"gabungkan atau pecah kalimat, ubah aktif ke pasif atau sebaliknya. "
-            f"TIDAK BOLEH ada 3 kata berurutan yang sama dengan versi ini.\n\n"
-            f"{text}"
+            f"TUGAS: Tulis ulang teks berikut.\n"
+            f"ATURAN MUTLAK:\n"
+            f"- Output HANYA teks yang sudah diubah\n"
+            f"- DILARANG menulis penjelasan, catatan, "
+            f"  atau daftar perubahan apapun\n"
+            f"- DILARANG menulis kalimat seperti "
+            f"  'berikut teks ulang' atau 'perubahan yang dilakukan'\n"
+            f"- Langsung mulai dengan kalimat pertama teks\n\n"
+            f"FOKUS: Ubah struktur kalimat secara fundamental. "
+            f"Tidak boleh ada 3 kata berurutan yang sama. "
+            f"Pertahankan {paragraph_count} paragraf.\n\n"
+            f"TEKS YANG HARUS DITULIS ULANG:\n{text}"
         )
         try:
             result2 = await asyncio.wait_for(
@@ -954,6 +1065,7 @@ async def apply_style(
                 timeout=60.0
             )
             text2 = str(result2.output).strip() if result2.output else ""
+            text2 = _strip_meta_commentary(text2)
             if text2:
                 text2 = _apply_post_processing(text2, style.language, style_mode)
                 text2 = _programmatic_sentence_humanize(text2, style.language, style_mode)
