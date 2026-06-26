@@ -2,40 +2,47 @@
   "user_id": "mode_populer",
   "language": "id",
   "style_mode": "populer",
-  "avg_sentence_length": 12.5,
-  "sentence_length_std": 17.1,
-  "flesch_reading_ease": 57.96,
-  "active_voice_ratio": 0.622,
+  "avg_sentence_length": 20.89,
+  "sentence_length_std": 11.06,
+  "flesch_reading_ease": 41.33,
+  "active_voice_ratio": 0.9126,
   "top_transitions": [
     "karena",
+    "however",
+    "kemudian",
     "namun",
-    "justru",
-    "sebab",
-    "walaupun",
+    "instead",
     "bahkan",
-    "kemudian"
+    "in addition",
+    "meanwhile",
+    "walaupun",
+    "selain itu"
   ],
-  "hedging_frequency": 0.087,
+  "hedging_frequency": 0.056,
   "emotion_register": "informal",
   "favorite_phrases": [
-    "tempat nya",
-    "di sini",
-    "makanan nya",
-    "restoran ini",
-    "tempat ini",
-    "nya sangat",
-    "nya tidak",
-    "kota bandung",
-    "berada di",
-    "tidak bisa"
+    "said the",
+    "according to",
+    "he said",
+    "to be",
+    "more than",
+    "a friend",
+    "e-mail to",
+    "e-mail to a",
+    "to a friend",
+    "e-mail to a friend"
   ],
-  "lexical_diversity": 0.3432,
-  "paragraph_length_avg": 1.23,
-  "few_shot_examples": [
-    "Jika Anda hanya memiliki waktu terbatas untuk mengeksplorasi kuliner di Kota Bandung, datanglah ke Paskal Food Market. Tempat ini merupakan pusat jajanan terbuka yang menyajikan ratusan menu makanan khas Nusantara. Variannya sangat banyak, mulai dari mi kocok, lumpia basah, hingga sate dan ronde hangat. Datanglah beramai-ramai dengan teman agar bisa mencicipi semuanya!",
-    "Terkadang, kita hanya butuh sedikit jeda dari rutinitas harian yang melelahkan. Cobalah luangkan waktu untuk menikmati secangkir kopi di sore hari, atau sekadar jalan-jalan santai di taman kota. Hal-hal sederhana seperti ini terbukti mampu mengembalikan energi positif. Selain itu, udara segar sangat baik untuk menjernihkan pikiran.",
-    "Saya mencoba makan siang di restoran ini karena sempat viral di media sosial. Saat pertama kali masuk, suasananya terasa sangat nyaman dengan sentuhan arsitektur bergaya klasik. Saya memilih duduk di area halaman belakang yang asri. Rasa nasi kebulinya sangat lezat dan porsinya mengenyangkan, pantas saja tempat ini selalu ramai dikunjungi.",
-    "Industri e-sports di Indonesia kini berkembang dengan sangat pesat! Tidak hanya sekadar hobi bermain game, kegiatan ini sudah menjadi profesi yang menjanjikan bagi anak muda. Berbagai turnamen dengan hadiah fantastis terus bermunculan setiap tahunnya. Jika dikelola dengan baik, ekosistem ini bisa menjadi penyumbang besar bagi ekonomi digital kita.",
-    "Gila! Seru banget menikmati makan malam romantis di atas gedung pencakar langit. Pemandangan lampu kota dari lantai 18 sungguh memanjakan mata, terutama saat cuaca sedang cerah. Makanan yang disajikan juga sangat enak, sepadan dengan harganya. Sangat direkomendasikan bagi Anda yang ingin merayakan hari jadi bersama pasangan tercinta."
+  "lexical_diversity": 0.123,
+  "paragraph_length_avg": 9.65,
+  "few_shot_examples_id": [
+    "Perkembangan teater di Lampung banyak dilatarbelakangi dari keinginan para pelajar dan mahasiswa yang tergabung dalam kelompok seni untuk mendalami seni peran dan pertunjukkan. Beberapa kelompok teater kampus dan pelajar yang masih tercatat aktif sampai saat ini adalah teater Kurusetra (UKMBS Unila), KSS (FKIP Unila), Green Teater (Umitra), Teater Biru (Darmajaya), Teater Kapuk (STAIN Metro), Teater Sudirman 41 (SMAN 1 Bandar Lampung), Teater Gemma (SMAN 2 Bandar Lampung), Teater Palapa (SMAN 3 Bandar Lampung), Teater Sanggar Madani(SMAN 5 Bandar Lampung), Teater Handayani (SMAN 7 Bandar Lampung), Kolastra (SMAN 9 Bandar Lampung), Teater Sebelas (SMAN 11 Bandar Lampung), Teater Pelopor (SMA Perintis 1 Bandar Lampung), Insyaallah Teater (SMU Perintis 2 Bandar Lampung), Teater Cupido (SMAN 1 Sumberjaya),dan Teater Pijar (SMA YP UNILA Bandar Lampung).",
+    "Para penulis \"Wired\" meliputi Jorn Barger, John Perry Barlow, John Battelle, Paul Boutin, Stewart Brand, Gareth Branwyn, Po Bronson, Scott Carney, Michael Chorost, Douglas Coupland, James Daly, Joshua Davis, J. Bradford DeLong, Mark Dery, David Diamond, Cory Doctorow, Esther Dyson, Mark Frauenfelder, Simson Garfinkel, William Gibson, Dan Gillmor Mike Godwin, George Gilder, Lou Ann Hammond, Chris Hardwick, Danny Hillis, Steven Johnson, Bill Joy, Jon Katz, Leander Kahney, Richard Kadrey, Jaron Lanier, Lawrence Lessig, Paul Levinson, Steven Levy, John Markoff, Wil McCarthy, Russ Mitchell, Glyn Moody, Charles Platt, Josh Quittner, Spencer Reiss, Howard Rheingold, Rudy Rucker, Paul Saffo, Adam Savage, Evan Schwartz, Peter Schwartz, Alex Steffen, Neal Stephenson, Bruce Sterling, John Hodgman, Kevin Warwick, Dave Winer, Belinda Parmar dan Gary Wolf.",
+    "Pada malam tanggal 8 menjelang tanggal 9 pada saat Cu Si (jam 23:00-01:00) Umat melakukan sembahyang lagi. Sembahyang ini disebut Sembahyang “King Thi Kong” (Sembahyang Tuhan Yang Maha Esa) dan dilakukan di depan pintu rumah menghadap langit lepas dengan menggunakan altar yang terbuat dari meja tinggi berikut sesaji, berupa Sam-Poo (teh, bunga, air jernih), Tee-Liau (teh dan manisan 3 macam), Mi Swa, Ngo Koo (lima macam buah), sepasang Tebu, dan tidak lupa beberapa peralatan seperti Hio-Lo (tempat dupa), Swan-Loo (tempat dupa ratus/bubuk), Bun-Loo (tempat menyempurnakan surat doa) dan Lilin Besar.",
+    "Himasiter (Himpunan Mahasiswa Nutrisi dan Makanan Ternak) merupakan salah satu lembaga kemahasiswaan non struktural yang berada di bawah naungan Departemen Ilmu Nutrisi dan Teknologi Pakan Fakultas Peternakan Institut Pertanian Bogor yang berbentuk organisasi kemahasiswaan yang mewadahi kegiatan profesi mahasiswa di lingkungan IPB pada umumnya dan Departemen Ilmu Nutrisi dan Teknologi Pakan pada khususnya serta memiliki karakteristik pengembangan keahlian dan keterampilan teknis di bidang nutrisi dan makanan ternak. Organisasi ini menjunjung tinggi nilai-nilai kekeluargaan untuk mencapai tujuan bersama yang diimplementasikan dalam suatu visi misi Himasiter."
+  ],
+  "few_shot_examples_en": [
+    "(CNN) -- A Virginia Military Institute cadet has been charged with rape and sodomy after a female cadet reported she was the victim of sexual assault. Stephen J. Lloyd, 21, is being held in the Rockbridge Regional Jail in Lexington, Virginia, according to a spokesman for the Rockbridge County Sheriff's Office. The alleged assault took place over the weekend, VMI superintendent retired Gen. J.H. Binford Peay said in a statement, and Lloyd was arrested by VMI police on Tuesday. \"After the female cadet made her report, the systems and procedures that are in place to address the safety of all cadets and to provide support were immediately placed into operation,\" Peay said in the statement. The case has been referred to the Virginia Commonwealth's Attorney and the state's criminal justice system, Peay said. Of VMI's 1,428 cadets, 111 are women, school spokesman Lt. Col. Stewart MacInnis told CNN affiliate WSLS-TV.",
+    "(CNN) -- A passenger who landed at Tokyo's Narita airport over the weekend has ended up with a surprise souvenir courtesy of customs officials -- a package of cannabis. Sniffer dogs failed to find the cannabis after it had been slipped into a passenger's bag. A customs official hid the package in a suitcase belonging to a passenger arriving from Hong Kong as part of an exercise for sniffer dogs on Sunday, Reuters.com reported. However, staff then lost track of the drugs and suitcase during the exercise, a spokeswoman for Tokyo customs said. Customs regulations specify that a training suitcase be used for such exercises, but the official had used passengers' suitcases for similar purposes in the past, domestic media reported. Tokyo customs has asked anyone who finds the package to return it.",
+    "(CNN) -- A 30-year-old dolphin at Sea World has died after colliding with another dolphin while performing aerial tricks, the Orlando, Florida, amusement park said Monday. The incident occurred about 4:30 p.m. Saturday at the Discovery Cove area of the park, according to a statement by Sea World spokeswoman Becca Bides. The animals were in the center of the lagoon and not near guests, she said. The dolphin who died was named Sharky. The other dolphin, Tyler, is being watched by veterinarians but appears to be fine, Bides said. \"This is an unfortunate, random incident,\" Bides said in a written statement. \"While it is not unusual to have two animals performing aerial behaviors at the same time, we are reviewing the situation to ensure even such a random incident does not occur again.\" E-mail to a friend ."
   ]
 }

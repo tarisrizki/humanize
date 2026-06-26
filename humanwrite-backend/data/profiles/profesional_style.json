@@ -2,37 +2,52 @@
   "user_id": "mode_profesional",
   "language": "id",
   "style_mode": "profesional",
-  "avg_sentence_length": 18.2,
-  "sentence_length_std": 15.07,
-  "flesch_reading_ease": 58.21,
-  "active_voice_ratio": 0.5565,
+  "avg_sentence_length": 19.38,
+  "sentence_length_std": 12.98,
+  "flesch_reading_ease": 35.96,
+  "active_voice_ratio": 0.6539,
   "top_transitions": [
     "karena",
     "namun",
-    "walaupun"
+    "bahkan",
+    "kemudian",
+    "sementara itu",
+    "sebab",
+    "selain itu",
+    "justru",
+    "misalnya",
+    "oleh karena itu"
   ],
-  "hedging_frequency": 0.165,
+  "hedging_frequency": 0.036,
   "emotion_register": "informal",
   "favorite_phrases": [
-    "di sini",
-    "nya juga",
-    "nya enak",
-    "tempat nya",
-    "rasa nya",
-    "makanan nya",
-    "nya yang",
-    "di bandung",
-    "malam hari",
-    "harga nya"
+    "kamis 17/9",
+    "saat ini",
+    "september 2015",
+    "17/9 2015",
+    "kamis 17/9 2015",
+    "salah satu",
+    "17 september",
+    "di indonesia",
+    "17 september 2015",
+    "kamis 17"
   ],
-  "lexical_diversity": 0.334,
-  "paragraph_length_avg": 1.15,
-  "few_shot_examples": [
-    "baso malang karapitan termasuk bakso fav saya namun selalu saja pelayanan dan kwalitas baso malang karapitan ciwalk ini di bawah standar dari kwalitas yang ada favorit saya mi ayam rica2 bakso urat dan stroberi segar juice namun lagi lagi kualitas nya membuat saya kecewa ayam-ayam rica2 nya sedikit saja dan rasa stroberi pun bukan segar tapi manis gula legit karena kebanyakan gula nya . lagi lagi kecewa",
-    "saya waktu itu lihat banner menu baru dari hokben , nama nya hot chicken steak karena sudah malam jadi memutuskan untuk bawa pulang , dan disuruh menunggu kata nya 15 menit tapi lammaaa malah mau setengah jam fyi , paket ini terdiri dari nasi , hot chicken , sayuran , ocha dan miso soup ternyata pas sampai rumah kok miso soup nya tidak ada ? apakah kalau bawa pulang jadi tidak dapat .",
-    "penasaran sama resto braga permai yang banyak di perbincangkan di sosial media . satu saat pergi ke sana setelah makan malam di salah satu restoran di jalan sumatera . kami mencoba cheese cake dan sejenis decadence cake tapi lupa nama pasti nya soal nya sudah sekitar bulan juni 2015 , tak hanya mengobati penasaran tapi kami menikmati suasana nya yang memang seperti membawa kita ke surga nya dunia .",
-    "makanan menurut saya biasa saja , hanya suasana yang membuat betah berlama-lama , untuk makan di tempat yang nyaman butuh mengantre panjang dimalam minggu , ketika kami berkunjung . pelayanan ramah dan cepat",
-    "ketika menjelang tengah malam dan anda kelaparan anda pasti memikirkan makanan makanan cepat saji , dan saya selalu membeli kfc ketika lapar tengah malam . pas di perut .",
-    "tentu buat pelayanan yang menyenangkan selama kami berada di sini oleh mas agus . dari mulai penerimaan kedatangan kami , pemesanan makanan , pada saat pesanan datang , sampai pada saat kami makan pun pelayan nya sempat menanyakan tanggapan kami mengenai makanan yang dipesan seperti apa . sampai kami didatangi oleh koki nya . memang pelayanan nya sesuai dengan pelayanan hotel nya yang berbintang 6 . harga makanan nya mantap ."
+  "lexical_diversity": 0.1337,
+  "paragraph_length_avg": 6.75,
+  "few_shot_examples_id": [
+    "REPUBLIKA.CO.ID, PARIS -- Berikut adalah hasil lengkap pertandingan penyisihan grup Liga Champions yang berlangsung pada Kamis (17/9) dini hari WIB:Bayer Leverkusen 4-1 BATE Roma 1-1 Barcelona Dinamo Zagreb 2-1 Arsenal Olympiakos Piraeus 0-3 Bayern Muenchen Dynamo Kiev 2-2 Porto Chelsea 4-0 Maccabi Tel Aviv Valencia 2-3 Zenit KAA Gantoise 1-1 Olympique Lyonnais",
+    "REPUBLIKA.CO.ID, JAKARTA - Duta Besar RI untuk Federasi Rusia dan Republik Belarus, Djauhari Oratmangun mengatakan Indonesia memiliki kemampuan dalam meningkatkan ekspor beberapa jenis produk dan komoditi unggulan Indonesia bagi kebutuhan pasar dalam negeri Rusia.\"Namun perlu bagi para stake holders dan pelaku bisnis nasional memahami karakteristik pasar dan peraturan di Rusia, seperti tatacara ekspor-impor dan sanitari bagi masuknya produk makanan-minumam ke Rusia,\" kata Djauhari.Oleh karenanya, pameran 24th International Food Exhibition WorldFood Moscow 2015 yang berlangsung pada 14-17 September 2015 di Expocenter, Moskow, Rusia bagi Indonesia pameran merupakan kesempatan emas bagi industri makanan dan minuman untuk memasuki pasar Rusia serta menjadi pintu masuk bagi pasar di negara-negara anggota Eurasian Customs Union yang terdiri dari Rusia, Belarus, Kazakhstan, Armenia dan Kyrgyztan.Pameran Worldfood mencakup semua sektor industri makanan antara lain menampilkan produk-produk daging olahan, seafood, buah dan sayuran, bakery, groceries, frozen food, teh dan kopi serta produk minuman.",
+    "REPUBLIKA.CO.ID, ROMA -- Gelandang AS Roma, Daniele De Rossi mengakui keberhasilan rekan setimnya menahan imbang Barcelona di Stadion Olimpico, Kamis (17/9) dini hari WIB dalam laga perdana Grup E Liga Champions adalah hasil pembelajaran dari kekalahan musim lalu.",
+    "REPUBLIKA.CO.ID, BANDA ACEH -- Ulama Aceh Tgk Fachruddin Lahmuddin SAg MPd berpendapat, kunjungan Presiden Joko Widodo ke Aceh untuk merayakan Idul Fitri 1436 Hijriah, diharapkan dapat meningkatkan ukhuwah Islamiah dan memperkuat perdamaian di daerah itu.",
+    "REPUBLIKA.CO.ID,ROMA -- Pelatih Barcelona Luis Enrique tak puas dengan hasil imbang 1-1 yang diperoleh timnya dalam laga pembuka Grup E Liga Champions UEFA melawan AS Roma di Stadion Olimpico, Kamis (17/9) dini hari WIB.",
+    "REPUBLIKA.CO.ID, SLEMAN -- Sebanyak 12 tim sepak bola dari 12 pondok pesantren di wilayah Daerah Istimewa Yogyakarta mengikuti babak penyisihan Liga Santri Nusantara di Stadion Tridadi, Kabupaten Sleman, Kamis (17/9) hingga Senin (21/9)."
+  ],
+  "few_shot_examples_en": [
+    "News: Droughts Like 1930s Dust Bowl May Have Been Unexceptional in Prehistoric Times, New Study Suggests Events like the great Dust Bowl of the 1930s, immortalized in \"The Grapes of Wrath\" and remembered as a transforming event for millions of Americans, were regular parts of much-earlier cycles of droughts followed by recoveries in the region, according to new studies by a multi-institutional research team led by Duke University. (Duke University press release)",
+    "News: Future Heat Waves: More Severe, More Frequent, and Longer Lasting Heat waves in Chicago, Paris, and elsewhere in North America and Europe will become more intense, more frequent, and longer lasting in the 21st century, according to a new modeling study by two scientists at the National Center for Atmospheric Research (NCAR). (NCAR press release)",
+    "FDA Warns of Terrorist Prescription Drug Tampering By DIEDTRA HENDERSON WASHINGTON (AP) -- \"Cues from chatter\" gathered around the world are raising concerns that terrorists might try to attack the domestic food and drug supply, particularly illegally imported prescription drugs, acting Food and Drug Administration Commissioner Lester M. Crawford says...",
+    "Olympics-Rowing-U.S. Eight Beats Canada to Set World Best Time ATHENS (Reuters) - The United States beat Canada in a world best time to qualify for the final of the men's Olympic eights race Sunday, as the two crews renewed their fierce rivalry in front of a raucous crowd at Schinias.",
+    "Wash. State Team's Private Rocket Explodes (AP) AP - A team taking a low-budget stab at the #36;10 million Ansari X Prize for private manned spaceflight suffered a setback Sunday, when their rocket malfunctioned and exploded after shooting less than 1,000 feet in the air.",
+    "Chavez Declares Recall Victory; Foes Claim Fraud CARACAS, Venezuela (Reuters) - Venezuela's left-wing President Hugo Chavez on Monday declared victory in a historic recall referendum on his rule, but his opponents vowed to challenge vote results they rejected as a \"gigantic fraud.\""
   ]
 }
