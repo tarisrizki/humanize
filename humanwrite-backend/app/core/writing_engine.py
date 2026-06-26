@@ -8,6 +8,7 @@ import json
 import os
 import re
 import random
+import statistics
 from typing import AsyncGenerator
 
 from pydantic_ai import Agent
@@ -188,6 +189,10 @@ seperti GPTZero, sambil mempertahankan semua fakta asli.
 {register_rules}
 
 ## ATURAN WAJIB (TIDAK BOLEH DILANGGAR)
+
+1. BAHASA: {lang_instruction}
+
+2. KONTEN ASLI WAJIB DIPERTAHANKAN: setiap kalimat output
    harus merupakan parafrasa dari kalimat di draf asli.
    DILARANG menambah opini, pertanyaan, atau informasi
    yang tidak ada di draf.
@@ -211,61 +216,6 @@ seperti GPTZero, sambil mempertahankan semua fakta asli.
 6. Catat perubahan signifikan di changes_made.
 """
 
-
-def _score_sentence_ai_likeness(sentence: str, lang: str = "id") -> bool:
-    """Return True if sentence looks AI-generated."""
-    s = sentence.lower().strip()
-    score = 0
-    
-    if lang in ("id", "mixed"):
-        ai_starters = [
-            "hal ini", "selain itu", "dengan demikian", "dapat ",
-            "perlu ", "dalam hal", "sebagai ", "oleh karena", 
-            "secara ", "berdasarkan", "di samping", "sementara itu",
-            "adapun", "terkait", "melalui", "untuk mencapai",
-        ]
-        ai_words = [
-            "merupakan", "memiliki", "berbagai", "sehingga",
-            "serta", "tersebut", "dilakukan", "digunakan",
-            "menunjukkan bahwa", "dapat disimpulkan", "penting untuk",
-        ]
-    else:
-        ai_starters = [
-            "this ", "it is", "in addition", "furthermore",
-            "moreover", "additionally", "consequently", "therefore",
-            "in conclusion", "it should", "in order to", "as a result",
-        ]
-        ai_words = [
-            "utilize", "leverage", "facilitate", "demonstrate",
-            "indicate", "significant", "crucial", "ensure", "implement",
-        ]
-    
-    # AI starter: +3
-    for starter in ai_starters:
-        if s.startswith(starter):
-            score += 3
-            break
-    
-    # Uniform length (10-20 words): +1
-    words = s.split()
-    if 10 <= len(words) <= 20:
-        score += 1
-    
-    # No personal voice: +1
-    personal = ["saya", "kami", "kita", "gue", "aku"] if lang in ("id","mixed") \
-               else ["i ", "we ", "my ", "our "]
-    if not any(m in s for m in personal):
-        score += 1
-    
-    # AI-typical words found: +2
-    if any(w in s for w in ai_words):
-        score += 2
-    
-    # No questions or exclamations: +0.5
-    if "?" not in sentence and "!" not in sentence:
-        score += 0.5
-    
-    return score >= 3.5
 
 
 def _programmatic_sentence_humanize(text: str, lang: str, style_mode: str = "populer") -> str:
@@ -612,7 +562,7 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
 # Set API key at module level
 os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
 
-def _check_trigram_overlap(original: str, rewritten: str) -> float:
+def check_trigram_overlap(original: str, rewritten: str) -> float:
     """
     Hitung persentase trigram (3 kata berurutan) yang sama
     antara original dan rewritten.
@@ -727,7 +677,6 @@ def _generate_changes_made(
     if orig_sents and new_sents:
         orig_lens = [len(s.split()) for s in orig_sents]
         new_lens  = [len(s.split()) for s in new_sents]
-        import statistics
         orig_std = statistics.stdev(orig_lens) if len(orig_lens) > 1 else 0
         new_std  = statistics.stdev(new_lens)  if len(new_lens)  > 1 else 0
         if new_std > orig_std + 2:
@@ -765,7 +714,7 @@ async def apply_style_stream(
     
     try:
         input_lang = "id" if detect(clean_draft[:2000]) in ("id", "ms") else "en"
-    except:
+    except Exception:
         input_lang = "id"
         
     system_prompt = _build_system_prompt(style, paragraph_count, input_lang)
@@ -816,7 +765,7 @@ async def apply_style_stream(
     text = _validate_paragraph_count(text, paragraph_count, clean_draft)
 
     # ── Trigram check — Pass 2 jika overlap terlalu tinggi ───
-    trigram_overlap = _check_trigram_overlap(clean_draft, text)
+    trigram_overlap = check_trigram_overlap(clean_draft, text)
 
     if _needs_rewrite(trigram_overlap, threshold=0.30):
         # Overlap terlalu tinggi → minta Groq rewrite lagi
@@ -844,7 +793,7 @@ async def apply_style_stream(
                 text2 = _programmatic_sentence_humanize(text2, style.language, style_mode)
                 text2 = _validate_paragraph_count(text2, paragraph_count, clean_draft)
                 # Hanya pakai Pass 2 jika overlap-nya lebih kecil
-                new_overlap = _check_trigram_overlap(clean_draft, text2)
+                new_overlap = check_trigram_overlap(clean_draft, text2)
                 if new_overlap < trigram_overlap:
                     text = text2
                     trigram_overlap = new_overlap
@@ -871,7 +820,7 @@ async def apply_style(
     
     try:
         input_lang = "id" if detect(clean_draft[:2000]) in ("id", "ms") else "en"
-    except:
+    except Exception:
         input_lang = "id"
         
     system_prompt = _build_system_prompt(style, paragraph_count, input_lang)
@@ -916,7 +865,7 @@ async def apply_style(
     text = _validate_paragraph_count(text, paragraph_count, clean_draft)
 
     # ── Trigram check — Pass 2 jika overlap terlalu tinggi ───
-    trigram_overlap = _check_trigram_overlap(clean_draft, text)
+    trigram_overlap = check_trigram_overlap(clean_draft, text)
 
     if _needs_rewrite(trigram_overlap, threshold=0.30):
         pass2_msg = (

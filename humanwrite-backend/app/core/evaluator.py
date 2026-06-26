@@ -1,9 +1,11 @@
-import sqlite3
 import json
 import datetime
+import re
+import sqlite3
 from pathlib import Path
-from pydantic import BaseModel
 from typing import Optional, Dict, Any
+
+from pydantic import BaseModel
 
 class EvaluationRecord(BaseModel):
     id: Optional[int] = None
@@ -164,10 +166,10 @@ class SQLiteEvaluator:
                 judge_score=row['judge_score'],
                 judge_feedback=row['judge_feedback'],
                 metadata=json.loads(row['metadata']) if row['metadata'] else {},
-                gptzero_before=row.get('gptzero_before'),
-                gptzero_after=row.get('gptzero_after'),
-                trigram_overlap=row.get('trigram_overlap'),
-                semantic_similarity=row.get('semantic_similarity')
+                gptzero_before=row['gptzero_before'],
+                gptzero_after=row['gptzero_after'],
+                trigram_overlap=row['trigram_overlap'],
+                semantic_similarity=row['semantic_similarity']
             )
             results.append(record)
             
@@ -210,24 +212,6 @@ class SQLiteEvaluator:
         conn.close()
         return success
 
-import re
-
-def compute_trigram_overlap(original: str, rewritten: str) -> float:
-    """
-    Versi standalone trigram overlap untuk dipakai
-    di evaluate endpoint tanpa import writing_engine.
-    """
-    def get_trigrams(text: str) -> set:
-        words = re.sub(r'[^\w\s]', '', text.lower()).split()
-        if len(words) < 3:
-            return set()
-        return set(zip(words, words[1:], words[2:]))
-
-    orig = get_trigrams(original)
-    new  = get_trigrams(rewritten)
-    if not orig:
-        return 0.0
-    return round(len(orig & new) / len(orig), 3)
 
 JUDGE_PROMPT_TEMPLATE = """
 Kamu adalah evaluator ahli untuk sistem humanisasi teks AI.

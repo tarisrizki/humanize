@@ -7,6 +7,7 @@ pre-trained global style profile.
 import difflib
 import os
 import io
+import re
 import time
 import json
 
@@ -193,7 +194,7 @@ def process_stream(response):
                 try:
                     chunk = json.loads(data_str)
                     yield chunk
-                except:
+                except Exception:
                     pass
             elif current_event == "metrics":
                 try:
@@ -498,7 +499,6 @@ with tab2:
 
             if overlap_info:
                 # Parse persentase dari string
-                import re
                 pct_match = re.search(r'(\d+)%', overlap_info)
                 if pct_match:
                     overlap_pct = int(pct_match.group(1))

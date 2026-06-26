@@ -1,9 +1,10 @@
 """Process endpoint — rewrites a draft to match the user's writing style."""
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 from app.config import settings
-from app.core.writing_engine import apply_style
+from app.core.writing_engine import apply_style, apply_style_stream
 from app.models.schemas import ProcessedText, ProcessRequest
 from app.models.style_profile import StyleProfile
 from app.storage.json_store import load_json, save_json
@@ -23,8 +24,6 @@ async def get_global_style(mode: str = "populer") -> StyleProfile:
     data["style_mode"] = mode
     return StyleProfile(**data)
 
-from fastapi.responses import StreamingResponse
-from app.core.writing_engine import apply_style, apply_style_stream
 
 @router.post("/process")
 async def process_draft(request: ProcessRequest) -> StreamingResponse:

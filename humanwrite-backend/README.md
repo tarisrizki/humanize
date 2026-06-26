@@ -1,12 +1,13 @@
 # ✍️ HumanWrite AI
 
-**Voice Preservation Engine** — Rewrite LLM-generated drafts to match your personal writing style.
+**Voice Preservation Engine** — Rewrite LLM-generated drafts to match your personal writing style while bypassing AI detectors and plagiarism checkers.
 
 ## How It Works
 
 1. **Train** — The system analyzes a corpus of 8,000+ texts (Wikipedia, News, Papers, Fiction) to extract quantitative Style Profiles using Stanza & spaCy.
 2. **Humanize** — Paste any AI-generated draft, select your desired style mode (Akademik, Profesional, Populer, Kreatif) and get it rewritten with natural human burstiness.
-3. **Evaluate** — Built-in LLM Judge automatically scores the output across 5 dimensions, and GPTZero scores can be manually tracked in the database.
+3. **Anti-Plagiarism** — A 2-pass rewrite pipeline with trigram overlap analysis ensures the output is structurally unique (< 15% overlap target for Turnitin safety).
+4. **Evaluate** — Built-in LLM Judge automatically scores the output across 5 dimensions, and GPTZero scores can be manually tracked in the database.
 
 ## Tech Stack
 
@@ -16,7 +17,8 @@
 | NLP (English) | spaCy (`en_core_web_sm`) |
 | NLP (Indonesian) | Stanza (`id`) |
 | Readability | textstat |
-| AI Rewriting | PydanticAI + Gemini 2.5 Flash |
+| AI Rewriting | PydanticAI + Groq LLaMA 3.3-70b |
+| LLM Judge | Groq LLaMA 3.3-70b |
 | GUI | Streamlit |
 | Package Manager | uv |
 | Dataset Extraction | HuggingFace Datasets & Pandas |
@@ -24,6 +26,7 @@
 ## Key Features
 - **Bilingual Support**: Fully supports English and Indonesian with language-specific Flesch scoring and NLP engines.
 - **Language-Aware Few-Shots**: Automatically detects draft language (via `langdetect`) and injects matching reference texts (English few-shots for English drafts, Indonesian for Indonesian).
+- **Turnitin Bypass**: 2-pass rewrite with trigram overlap analysis. Pass 1 rewrites the text; if structural overlap > 30%, Pass 2 automatically triggers a deeper structural rewrite.
 - **CSV Data Architecture**: Uses single-file CSVs for large 8,000+ document datasets rather than splitting into thousands of tiny `.txt` files, making Git operations instantaneous.
 
 ## Quick Start
@@ -40,8 +43,8 @@ uv sync --extra gui
 
 ```bash
 cp .env.example .env
-# Edit .env and add your Gemini API key:
-# GEMINI_API_KEY=your_actual_key_here
+# Edit .env and add your Groq API key:
+# GROQ_API_KEY=your_actual_key_here
 ```
 
 ### 3. Start the Backend
@@ -71,7 +74,7 @@ Navigate to [http://localhost:8501](http://localhost:8501) in your browser.
 | `GET` | `/health` | Health check & model status |
 | `GET` | `/api/v1/style` | Get the currently active global Style Profile |
 | `POST` | `/api/v1/process` | Rewrite draft using streaming Server-Sent Events (SSE) |
-| `POST` | `/api/v1/evaluate/run` | Log a humanize run to the DB |
+| `POST` | `/api/v1/evaluate/run` | Log a humanize run to the DB (auto-computes trigram overlap) |
 | `POST` | `/api/v1/evaluate/judge` | Run the Llama-3.3 LLM Judge |
 | `PATCH`| `/api/v1/evaluate/{id}/gptzero` | Update GPTZero scores |
 | `GET` | `/api/v1/evaluate/history` | Get all past evaluation results |
@@ -104,12 +107,12 @@ write/
 │   │   ├── main.py                     # FastAPI entry point
 │   │   ├── config.py                   # Environment configuration
 │   │   ├── api/v1/endpoints/
-│   │   │   ├── upload.py               # Document upload
-│   │   │   ├── analyze.py              # Style analysis
-│   │   │   └── process.py              # Draft processing
+│   │   │   ├── process.py              # Draft processing (streaming SSE)
+│   │   │   └── evaluate.py             # Evaluation, LLM Judge, GPTZero
 │   │   ├── core/
 │   │   │   ├── style_analyzer.py       # NLP analysis (spaCy + Stanza)
-│   │   │   └── writing_engine.py       # AI rewriting (PydanticAI)
+│   │   │   ├── writing_engine.py       # AI rewriting + anti-plagiarism
+│   │   │   └── evaluator.py            # SQLite DB + LLM Judge
 │   │   ├── models/
 │   │   │   ├── style_profile.py        # StyleProfile model
 │   │   │   └── schemas.py              # API schemas
@@ -121,7 +124,11 @@ write/
 │   │   ├── corpus_populer.csv          # 2,000 texts bilingual dataset
 │   │   ├── corpus_kreatif.csv          # 1,000+ texts bilingual dataset
 │   │   ├── profiles/                   # Generated JSON style profiles
-│   │   └── outputs/                    # Processing results
+│   │   └── evaluations.db             # SQLite evaluation database
+│   ├── scripts/
+│   │   ├── train_profiles.py           # Train style profiles from corpus
+│   │   └── generate_8000_corpus.py     # Generate corpus datasets
+│   ├── tests/                          # Pytest test suite
 │   ├── pyproject.toml
 │   ├── .env.example
 │   └── README.md
