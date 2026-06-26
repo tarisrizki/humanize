@@ -114,8 +114,8 @@ class SQLiteEvaluator:
                 timestamp, style_mode, language, original_text, output_text,
                 burstiness, content_preservation, ai_word_reduction,
                 paragraph_integrity, eyd_score, judge_score, judge_feedback, metadata,
-                gptzero_before, gptzero_after, result_ai, result_mixed, result_human, trigram_overlap, semantic_similarity
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                gptzero_before, gptzero_ai, gptzero_mixed, gptzero_human, trigram_overlap, semantic_similarity
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             now,
             record.style_mode,
@@ -131,7 +131,9 @@ class SQLiteEvaluator:
             record.judge_feedback,
             metadata_str,
             record.gptzero_before,
-            record.gptzero_after, record.result_ai, record.result_mixed, record.result_human, result_ai, result_mixed, result_human,
+            record.gptzero_ai,
+            record.gptzero_mixed,
+            record.gptzero_human,
             record.trigram_overlap,
             record.semantic_similarity
         ))

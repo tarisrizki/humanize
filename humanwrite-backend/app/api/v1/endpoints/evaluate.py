@@ -22,10 +22,9 @@ class EvaluationRequest(BaseModel):
     judge_score: Optional[float] = None
     judge_feedback: Optional[str] = None
     gptzero_before: Optional[float] = None
-    gptzero_after: Optional[float] = None
-    result_ai: Optional[float] = None
-    result_mixed: Optional[float] = None
-    result_human: Optional[float] = None
+    gptzero_ai: Optional[int] = None
+    gptzero_mixed: Optional[int] = None
+    gptzero_human: Optional[int] = None
     metadata: Optional[Dict[str, Any]] = None
     trigram_overlap: Optional[float] = None
     semantic_similarity: Optional[float] = None
@@ -62,6 +61,9 @@ async def run_evaluation(request: EvaluationRequest):
             judge_score=request.judge_score,
             judge_feedback=request.judge_feedback,
             gptzero_before=request.gptzero_before,
+            gptzero_ai=request.gptzero_ai,
+            gptzero_mixed=request.gptzero_mixed,
+            gptzero_human=request.gptzero_human,
             metadata=request.metadata,
             trigram_overlap=check_trigram_overlap(request.original_text, request.output_text)
         )
