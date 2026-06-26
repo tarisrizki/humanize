@@ -32,9 +32,9 @@ class EvaluationRequest(BaseModel):
 
 class GPTZeroUpdateRequest(BaseModel):
     gptzero_before: Optional[float] = None
-    result_ai: Optional[float] = None
-    result_mixed: Optional[float] = None
-    result_human: Optional[float] = None
+    gptzero_ai: Optional[int] = None
+    gptzero_mixed: Optional[int] = None
+    gptzero_human: Optional[int] = None
 
 class JudgeRequest(BaseModel):
     record_id: int          # FK ke evaluation result
@@ -79,9 +79,9 @@ async def update_gptzero(record_id: int, request: GPTZeroUpdateRequest):
         success = evaluator.update_gptzero_score(
             record_id, 
             gptzero_before=request.gptzero_before, 
-            result_ai=request.result_ai,
-            result_mixed=request.result_mixed,
-            result_human=request.result_human
+            gptzero_ai=request.gptzero_ai,
+            gptzero_mixed=request.gptzero_mixed,
+            gptzero_human=request.gptzero_human
         )
         if not success:
             raise HTTPException(status_code=404, detail="Record not found or no updates provided")

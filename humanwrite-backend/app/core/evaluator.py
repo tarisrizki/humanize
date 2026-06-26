@@ -28,10 +28,9 @@ class EvaluationRecord(BaseModel):
     
     # GPTZero manual input
     gptzero_before: Optional[float] = None
-    gptzero_after: Optional[float] = None
-    result_ai: Optional[float] = None
-    result_mixed: Optional[float] = None
-    result_human: Optional[float] = None
+    gptzero_ai: Optional[int] = None
+    gptzero_mixed: Optional[int] = None
+    gptzero_human: Optional[int] = None
     
     # Anti-plagiarism
     trigram_overlap: Optional[float] = None
@@ -71,10 +70,9 @@ class SQLiteEvaluator:
                 judge_feedback TEXT,
                 metadata TEXT,
                 gptzero_before REAL,
-                gptzero_after REAL,
-                result_ai REAL,
-                result_mixed REAL,
-                result_human REAL,
+                gptzero_ai INTEGER,
+                gptzero_mixed INTEGER,
+                gptzero_human INTEGER,
                 trigram_overlap REAL,
                 semantic_similarity REAL
             )
@@ -88,9 +86,9 @@ class SQLiteEvaluator:
             pass # Columns already exist
 
         try:
-            cursor.execute("ALTER TABLE evaluations ADD COLUMN result_ai REAL")
-            cursor.execute("ALTER TABLE evaluations ADD COLUMN result_mixed REAL")
-            cursor.execute("ALTER TABLE evaluations ADD COLUMN result_human REAL")
+            cursor.execute("ALTER TABLE evaluations ADD COLUMN gptzero_ai INTEGER")
+            cursor.execute("ALTER TABLE evaluations ADD COLUMN gptzero_mixed INTEGER")
+            cursor.execute("ALTER TABLE evaluations ADD COLUMN gptzero_human INTEGER")
         except sqlite3.OperationalError:
             pass
 
@@ -180,10 +178,9 @@ class SQLiteEvaluator:
                 judge_feedback=row['judge_feedback'],
                 metadata=json.loads(row['metadata']) if row['metadata'] else {},
                 gptzero_before=row['gptzero_before'],
-                gptzero_after=row['gptzero_after'],
-                result_ai=row['result_ai'],
-                result_mixed=row['result_mixed'],
-                result_human=row['result_human'],
+                gptzero_ai=row['gptzero_ai'],
+                gptzero_mixed=row['gptzero_mixed'],
+                gptzero_human=row['gptzero_human'],
                 trigram_overlap=row['trigram_overlap'],
                 semantic_similarity=row['semantic_similarity']
             )
@@ -191,7 +188,7 @@ class SQLiteEvaluator:
             
         return results
 
-    def update_gptzero_score(self, record_id: int, gptzero_before: float = None, result_ai: float = None, result_mixed: float = None, result_human: float = None) -> bool:
+    def update_gptzero_score(self, record_id: int, gptzero_before: float = None, gptzero_ai: int = None, gptzero_mixed: int = None, gptzero_human: int = None) -> bool:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -200,15 +197,15 @@ class SQLiteEvaluator:
         if gptzero_before is not None:
             updates.append("gptzero_before = ?")
             params.append(gptzero_before)
-        if result_ai is not None:
-            updates.append("result_ai = ?")
-            params.append(result_ai)
-        if result_mixed is not None:
-            updates.append("result_mixed = ?")
-            params.append(result_mixed)
-        if result_human is not None:
-            updates.append("result_human = ?")
-            params.append(result_human)
+        if gptzero_ai is not None:
+            updates.append("gptzero_ai = ?")
+            params.append(gptzero_ai)
+        if gptzero_mixed is not None:
+            updates.append("gptzero_mixed = ?")
+            params.append(gptzero_mixed)
+        if gptzero_human is not None:
+            updates.append("gptzero_human = ?")
+            params.append(gptzero_human)
             
         if not updates:
             conn.close()

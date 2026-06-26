@@ -539,11 +539,11 @@ with tab2:
                 st.markdown("**Hasil Humanize (GPTZero %)**")
                 col_a, col_m, col_h = st.columns(3)
                 with col_a:
-                    result_ai = st.number_input("AI", min_value=0.0, max_value=100.0, value=0.0)
+                    gptzero_ai = st.number_input("AI", min_value=0, max_value=100, value=0)
                 with col_m:
-                    result_mixed = st.number_input("Mixed", min_value=0.0, max_value=100.0, value=0.0)
+                    gptzero_mixed = st.number_input("Mixed", min_value=0, max_value=100, value=0)
                 with col_h:
-                    result_human = st.number_input("Human", min_value=0.0, max_value=100.0, value=100.0)
+                    gptzero_human = st.number_input("Human", min_value=0, max_value=100, value=100)
             
             submitted = st.form_submit_button("Simpan Skor Anti-Deteksi")
             if submitted:
@@ -552,9 +552,9 @@ with tab2:
                         f"{BACKEND_URL}/api/v1/evaluate/{st.session_state['last_record_id']}/gptzero",
                         json={
                             "gptzero_before": gptzero_before,
-                            "result_ai": result_ai,
-                            "result_mixed": result_mixed,
-                            "result_human": result_human
+                            "gptzero_ai": gptzero_ai,
+                            "gptzero_mixed": gptzero_mixed,
+                            "gptzero_human": gptzero_human
                         }
                     )
                     resp.raise_for_status()
@@ -580,7 +580,7 @@ with tab3:
                     # Clean up data for dataframe
                     df = pd.DataFrame(history_data)
                     # Convert to simpler columns
-                    cols_to_show = ["id", "timestamp", "style_mode", "burstiness", "ai_word_reduction", "judge_score", "gptzero_before", "result_ai", "result_mixed", "result_human"]
+                    cols_to_show = ["id", "timestamp", "style_mode", "burstiness", "ai_word_reduction", "judge_score", "gptzero_before", "gptzero_ai", "gptzero_mixed", "gptzero_human"]
                     existing_cols = [c for c in cols_to_show if c in df.columns]
                     st.dataframe(df[existing_cols].sort_values(by="id", ascending=False))
                 else:
