@@ -307,6 +307,21 @@ if humanize_btn and draft_text:
             
             st.session_state["last_result"] = final_text
             st.session_state["last_draft"] = draft_text
+            st.session_state["style_mode_val"] = style_mode_val
+            
+            # Log the evaluation to get a record_id
+            eval_resp = requests.post(
+                f"{BACKEND_URL}/api/v1/evaluate/run",
+                json={
+                    "style_mode": style_mode_val,
+                    "language": profile.get("language", "id"),
+                    "original_text": draft_text,
+                    "output_text": final_text,
+                },
+                timeout=10,
+            )
+            if eval_resp.status_code == 200:
+                st.session_state["last_record_id"] = eval_resp.json().get("record_id")
             
         except Exception as e:
             st.error(f"Processing failed: {e}")
@@ -405,6 +420,57 @@ if st.session_state.get("last_result"):
                 f'<div class="change-item">💡 {change}</div>',
                 unsafe_allow_html=True,
             )
+
+    # ── LLM Judge ─────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### 🤖 LLM as a Judge Evaluation")
+    if "last_record_id" in st.session_state:
+        if st.button("🤖 Jalankan LLM Judge", use_container_width=True):
+            with st.spinner("Llama-3.3-70b sedang mengevaluasi..."):
+                try:
+                    resp = requests.post(
+                        f"{BACKEND_URL}/api/v1/evaluate/judge",
+                        json={
+                            "record_id":      st.session_state["last_record_id"],
+                            "original_text":  original_draft,
+                            "humanized_text": final_text,
+                            "style_mode":     st.session_state.get("style_mode_val", "populer"),
+                            "language":       profile.get("language", "id"),
+                        },
+                        timeout=60
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    
+                    score = data["overall_score"]
+                    color = "green" if score >= 70 else "orange" if score >= 50 else "red"
+                    
+                    st.markdown(f"### Overall Score: :{color}[{score}/100]")
+                    
+                    col_j1, col_j2 = st.columns(2)
+                    breakdown = data["breakdown"]
+                    
+                    with col_j1:
+                        for dim in ["naturalness", "register_compliance", "content_fidelity"]:
+                            d = breakdown[dim]
+                            st.metric(dim.replace("_", " ").title(), f"{d['score']}/10")
+                            st.caption(d["reason"])
+                            
+                    with col_j2:
+                        for dim in ["eyd_grammar", "anti_detection"]:
+                            d = breakdown[dim]
+                            st.metric(dim.replace("_", " ").title(), f"{d['score']}/10")
+                            st.caption(d["reason"])
+                            
+                    if breakdown["critical_issues"]:
+                        st.error("⚠️ Critical Issues:\n" + "\n".join(f"• {i}" for i in breakdown["critical_issues"]))
+                        
+                    st.success(f"✅ Highlight: *{breakdown['highlight']}*")
+                    st.warning(f"⚠️ Worst: *{breakdown['worst_sentence']}*")
+                except Exception as e:
+                    st.error(f"Gagal menjalankan LLM Judge: {e}")
+    else:
+        st.info("Record ID tidak ditemukan. Harap humanize teks terlebih dahulu.")
 
     # ── Export Buttons ────────────────────────────────────────────
     st.markdown("---")

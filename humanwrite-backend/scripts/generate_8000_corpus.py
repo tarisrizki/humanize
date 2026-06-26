@@ -10,10 +10,14 @@ backend_dir = Path(__file__).resolve().parent.parent
 data_dir = backend_dir / "data"
 os.makedirs(data_dir, exist_ok=True)
 
+import re
+
 def clean_text(text):
     if not isinstance(text, str):
         return ""
     text = " ".join(text.split())
+    # Capitalize the first letter of every sentence
+    text = re.sub(r'(^[a-z]|\.\s+[a-z])', lambda m: m.group().upper(), text)
     return text
 
 def fetch_dataset(hf_path, hf_name, split, text_field, limit=1000, skip=0, lang="id", trust_remote_code=True, is_translation=False, trans_lang="en"):
@@ -34,7 +38,10 @@ def fetch_dataset(hf_path, hf_name, split, text_field, limit=1000, skip=0, lang=
                 
             text = clean_text(raw)
             words = text.split()
-            if 30 <= len(words) <= 500:
+            if len(words) >= 30:
+                if len(words) > 400:
+                    # Truncate to ~400 words and add ellipsis
+                    text = " ".join(words[:400]) + "..."
                 results.append({"text": text, "lang": lang, "source": hf_path})
             if len(results) >= limit:
                 break
@@ -79,7 +86,7 @@ def main():
     # 4. Kreatif
     create_csv_for_mode("kreatif", [
         {"hf_path": "Helsinki-NLP/opus_books", "hf_name": "en-it", "split": "train", "text_field": "translation", "lang": "en", "is_translation": True, "trans_lang": "en"},
-        {"hf_path": "jakartaresearch/cerpen-corpus", "hf_name": "default", "split": "train", "text_field": "content", "lang": "id"}
+        {"hf_path": "nizzyhussle/cerpen", "hf_name": "default", "split": "train", "text_field": "content", "lang": "id"}
     ])
 
 if __name__ == "__main__":
