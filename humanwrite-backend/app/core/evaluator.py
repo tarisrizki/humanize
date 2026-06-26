@@ -193,7 +193,6 @@ class SQLiteEvaluator:
         conn.close()
         return success
 
-import anthropic
 import re
 
 JUDGE_PROMPT_TEMPLATE = """

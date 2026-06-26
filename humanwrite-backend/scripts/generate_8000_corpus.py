@@ -86,7 +86,8 @@ def main():
     # 4. Kreatif
     create_csv_for_mode("kreatif", [
         {"hf_path": "Helsinki-NLP/opus_books", "hf_name": "en-it", "split": "train", "text_field": "translation", "lang": "en", "is_translation": True, "trans_lang": "en"},
-        {"hf_path": "nizzyhussle/cerpen", "hf_name": "default", "split": "train", "text_field": "content", "lang": "id"}
+        {"hf_path": "nizzyhussle/cerpen", "hf_name": "default", "split": "train", "text_field": "content", "lang": "id"},
+        {"hf_path": "indonesian-nlp/wikipedia-id", "hf_name": "default", "split": "train", "text_field": "text", "lang": "id", "skip": 3000, "trust_remote_code": False}
     ])
 
 if __name__ == "__main__":

@@ -471,6 +471,35 @@ if st.session_state.get("last_result"):
                     st.error(f"Gagal menjalankan LLM Judge: {e}")
     else:
         st.info("Record ID tidak ditemukan. Harap humanize teks terlebih dahulu.")
+        
+    # ── GPTZero Manual Input ───────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### 🕵️ GPTZero Manual Input")
+    if "last_record_id" in st.session_state:
+        with st.form("gptzero_form"):
+            st.markdown(f"**Record ID**: {st.session_state['last_record_id']}")
+            col_g1, col_g2 = st.columns(2)
+            with col_g1:
+                gptzero_before = st.slider("GPTZero Score (Original % AI)", 0, 100, 50, key="gptzero_before")
+            with col_g2:
+                gptzero_after = st.slider("GPTZero Score (Humanized % AI)", 0, 100, 0, key="gptzero_after")
+            
+            submitted = st.form_submit_button("Simpan Skor GPTZero")
+            if submitted:
+                try:
+                    resp = requests.patch(
+                        f"{BACKEND_URL}/api/v1/evaluate/{st.session_state['last_record_id']}/gptzero",
+                        json={
+                            "gptzero_before": gptzero_before,
+                            "gptzero_after": gptzero_after
+                        }
+                    )
+                    resp.raise_for_status()
+                    st.success("✅ Skor GPTZero berhasil disimpan!")
+                except Exception as e:
+                    st.error(f"Gagal menyimpan skor GPTZero: {e}")
+    else:
+        st.info("Record ID tidak ditemukan.")
 
     # ── Export Buttons ────────────────────────────────────────────
     st.markdown("---")
