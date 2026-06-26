@@ -1,7 +1,7 @@
 {
   "user_id": "mode_akademik",
   "language": "id",
-  "style_mode": "populer",
+  "style_mode": "akademik",
   "avg_sentence_length": 21.78,
   "sentence_length_std": 13.41,
   "flesch_reading_ease": 36.34,

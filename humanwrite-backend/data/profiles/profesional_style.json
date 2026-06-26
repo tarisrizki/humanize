@@ -1,7 +1,7 @@
 {
   "user_id": "mode_profesional",
   "language": "id",
-  "style_mode": "populer",
+  "style_mode": "profesional",
   "avg_sentence_length": 18.2,
   "sentence_length_std": 15.07,
   "flesch_reading_ease": 58.21,
