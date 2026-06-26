@@ -890,7 +890,7 @@ async def apply_style(
                 text2 = _apply_post_processing(text2, style.language, style_mode)
                 text2 = _programmatic_sentence_humanize(text2, style.language, style_mode)
                 text2 = _validate_paragraph_count(text2, paragraph_count, clean_draft)
-                new_overlap = _check_trigram_overlap(clean_draft, text2)
+                new_overlap = check_trigram_overlap(clean_draft, text2)
                 if new_overlap < trigram_overlap:
                     text = text2
                     trigram_overlap = new_overlap
