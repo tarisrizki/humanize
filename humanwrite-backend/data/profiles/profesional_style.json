@@ -1,0 +1,38 @@
+{
+  "user_id": "mode_profesional",
+  "language": "id",
+  "style_mode": "populer",
+  "avg_sentence_length": 33.45,
+  "sentence_length_std": 15.07,
+  "flesch_reading_ease": 58.21,
+  "active_voice_ratio": 0.5565,
+  "top_transitions": [
+    "karena",
+    "namun",
+    "walaupun"
+  ],
+  "hedging_frequency": 0.165,
+  "emotion_register": "informal",
+  "favorite_phrases": [
+    "di sini",
+    "nya juga",
+    "nya enak",
+    "tempat nya",
+    "rasa nya",
+    "makanan nya",
+    "nya yang",
+    "di bandung",
+    "malam hari",
+    "harga nya"
+  ],
+  "lexical_diversity": 0.334,
+  "paragraph_length_avg": 1.15,
+  "few_shot_examples": [
+    "baso malang karapitan termasuk bakso fav saya namun selalu saja pelayanan dan kwalitas baso malang karapitan ciwalk ini di bawah standar dari kwalitas yang ada favorit saya mi ayam rica2 bakso urat dan stroberi segar juice namun lagi lagi kualitas nya membuat saya kecewa ayam-ayam rica2 nya sedikit saja dan rasa stroberi pun bukan segar tapi manis gula legit karena kebanyakan gula nya . lagi lagi kecewa",
+    "saya waktu itu lihat banner menu baru dari hokben , nama nya hot chicken steak karena sudah malam jadi memutuskan untuk bawa pulang , dan disuruh menunggu kata nya 15 menit tapi lammaaa malah mau setengah jam fyi , paket ini terdiri dari nasi , hot chicken , sayuran , ocha dan miso soup ternyata pas sampai rumah kok miso soup nya tidak ada ? apakah kalau bawa pulang jadi tidak dapat .",
+    "penasaran sama resto braga permai yang banyak di perbincangkan di sosial media . satu saat pergi ke sana setelah makan malam di salah satu restoran di jalan sumatera . kami mencoba cheese cake dan sejenis decadence cake tapi lupa nama pasti nya soal nya sudah sekitar bulan juni 2015 , tak hanya mengobati penasaran tapi kami menikmati suasana nya yang memang seperti membawa kita ke surga nya dunia .",
+    "makanan menurut saya biasa saja , hanya suasana yang membuat betah berlama-lama , untuk makan di tempat yang nyaman butuh mengantre panjang dimalam minggu , ketika kami berkunjung . pelayanan ramah dan cepat",
+    "ketika menjelang tengah malam dan anda kelaparan anda pasti memikirkan makanan makanan cepat saji , dan saya selalu membeli kfc ketika lapar tengah malam . pas di perut .",
+    "tentu buat pelayanan yang menyenangkan selama kami berada di sini oleh mas agus . dari mulai penerimaan kedatangan kami , pemesanan makanan , pada saat pesanan datang , sampai pada saat kami makan pun pelayan nya sempat menanyakan tanggapan kami mengenai makanan yang dipesan seperti apa . sampai kami didatangi oleh koki nya . memang pelayanan nya sesuai dengan pelayanan hotel nya yang berbintang 6 . harga makanan nya mantap ."
+  ]
+}

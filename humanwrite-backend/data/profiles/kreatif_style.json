@@ -1,0 +1,41 @@
+{
+  "user_id": "mode_kreatif",
+  "language": "id",
+  "style_mode": "populer",
+  "avg_sentence_length": 33.03,
+  "sentence_length_std": 18.91,
+  "flesch_reading_ease": 55.6,
+  "active_voice_ratio": 0.5522,
+  "top_transitions": [
+    "karena",
+    "namun",
+    "bahkan",
+    "selain itu",
+    "sebab",
+    "kemudian"
+  ],
+  "hedging_frequency": 0.119,
+  "emotion_register": "informal",
+  "favorite_phrases": [
+    "tempat nya",
+    "di sini",
+    "nya enak",
+    "nya yang",
+    "ke bandung",
+    "tempat ini",
+    "makanan nya",
+    "di bandung",
+    "salah satu",
+    "ke sini"
+  ],
+  "lexical_diversity": 0.3443,
+  "paragraph_length_avg": 1.3,
+  "few_shot_examples": [
+    "kampung daun memiliki suasana yang nyaman , seperti di pegunungan , makan siang ataupun makan malam , di kampung daun ini sangatlah romantis , ditemani gemericik air , suasana hijau , cuaca sejuk , dengan makanan khas sunda indonesia selain itu sudah ada makanan luar seperti steak , yang ingin mencicipi menu istimewa seperti nasi timbel dan nasi campur sunda sangatlah cocok di sini . makan serabi ditemani minuman bajigur menambahkan hangat nya suasana .",
+    "tokoh-tokoh penggerak gerakan partai pki indonesia : sby , iwan skeneder , paul dundes woolvowiz , oliver north , calvin haris , agung sasongko , putra mas agung , agung priyambodo , eko pratomo curup jehan , dan si : kopral pki tri sutrisno c.s. .",
+    "kami sudah 2 x datang ke sini , pertama datang di sore hari dan yang kedua di siang hari , kedua nya sama bagus nya , tapi lebih asik datang di sore hingga malam hari , suasana romantis dan dingin nya dapat banget . bagus",
+    "saat makan malam akan lebih terkesan dengan suasana natural yang di tawarkan nya , selain makanan yang kami pesan enak juga pelayanan sangat ramah dan begitu terasa excotis , keluarga sangat puas , jarak tempuh tidak terlalu jauh dari kota . kami pasti kembali",
+    "pemandangan oke dan cocok banget untuk menyegarkan . udara adem . menu makanan cukup variasi , rasa makanan ada yang enak ada juga yang biasa-biasa saja tapi bukan patokan karena selera beda-beda tiap orang : kalau ke bandung bolehlah coba-coba mampir sejuk banget adem",
+    "dusun bambu mudah dijangkau dari lembang , menawarkan keluarga leisure park yang bagus , restoran nya berkonsep foodcourt , banyak jenis makanan dari berbagai negara dan daerah di indonesia . yang sangat menarik adalah ada nya ruang makan yang dibuat seperti sarang burung , untuk menuju ke sarang burung harus melaluo jalan canopy kayu yang cukup panjang . sangat menarik ."
+  ]
+}

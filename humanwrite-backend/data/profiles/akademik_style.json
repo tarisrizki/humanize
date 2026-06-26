@@ -1,0 +1,45 @@
+{
+  "user_id": "mode_akademik",
+  "language": "id",
+  "style_mode": "populer",
+  "avg_sentence_length": 21.78,
+  "sentence_length_std": 13.41,
+  "flesch_reading_ease": 36.34,
+  "active_voice_ratio": 0.608,
+  "top_transitions": [
+    "karena",
+    "namun",
+    "sebab",
+    "walaupun",
+    "bahkan",
+    "kemudian",
+    "sebaliknya",
+    "dengan demikian",
+    "di sisi lain",
+    "sebagai contoh"
+  ],
+  "hedging_frequency": 0.068,
+  "emotion_register": "informal",
+  "favorite_phrases": [
+    "ilmu pengetahuan",
+    "tempat nya",
+    "para ilmuwan",
+    "restoran ini",
+    "nya enak",
+    "tempat ini",
+    "nya juga",
+    "berfokus pada",
+    "penelitian yang",
+    "yang ada"
+  ],
+  "lexical_diversity": 0.4148,
+  "paragraph_length_avg": 1.76,
+  "few_shot_examples": [
+    "Sepanjang abad ke-19, banyak ciri khas dari sains modern mulai mengambil bentuknya. Di antaranya adalah transformasi besar dalam ilmu kehidupan dan ilmu fisika; penggunaan instrumen presisi secara meluas; kemunculan istilah-istilah baru seperti “biolog”, “fisikawan”, dan “ilmuwan”; meningkatnya profesionalisasi dalam studi alam; bertambahnya otoritas kultural ilmuwan dalam berbagai ranah kehidupan sosial; industrialisasi di banyak negara; maraknya tulisan-tulisan sains populer; serta lahirnya jurnal-jurnal ilmiah.",
+    "Sungai Nil memiliki kedudukan penting dalam kebudayaan Mesir; ia memengaruhi perkembangan matematika, geografi, dan kalender; geometri Mesir maju karena praktik pengukuran tanah \"sebab luapan Sungai Nil menyebabkan batas setiap lahan lenyap.\"",
+    "...modern science is a discovery as well as an invention. It was a discovery that nature generally acts regularly enough to be described by laws and even by mathematics; and required invention to devise the techniques, abstractions, apparatus, and organization for exhibiting the regularities and securing their law-like descriptions.",
+    "belanja di pelayanan nya baik : kakak-kakak nya juga ramah dan sabar sama customer nya : puas deh belanja di sini thankyou kakak tidak buat dongkol hati atau geram . aku suka .",
+    "Ekonomi makro atau makroekonomi adalah studi mengenai ekonomi secara keseluruhan. Bidang ini berfokus pada penjelasan perubahan ekonomi yang memengaruhi banyak masyarakat, perusahaan, dan pasar. Ekonomi makro digunakan untuk menganalisis cara memengaruhi target kebijakan seperti pertumbuhan ekonomi, stabilitas harga, tenaga kerja, dan keseimbangan neraca yang berkesinambungan. Meskipun ekonomi makro merupakan bidang pembelajaran yang luas, ada dua area penelitian yang menjadi ciri khas disiplin ini: kegiatan untuk mempelajari sebab dan akibat dari fluktuasi penerimaan negara jangka pendek (siklus bisnis), dan kegiatan untuk mempelajari faktor penentu dari pertumbuhan ekonomi jangka panjang (peningkatan pendapatan nasional). Model makroekonomi dan prediksi-prediksi yang ada jamak digunakan oleh pemerintah dan perusahaan besar untuk membantu pengembangan dan evaluasi kebijakan ekonomi dan strategi bisnis.",
+    "Lihat hlm. 464: \"Schramm merangkum pencapaian [Ibn al-Haytham] dalam pengembangan metode ilmiah.\" Hlm. 465: \"Schramm menunjukkan dengan tak terbantahkan bahwa Ibn al-Haytham adalah tokoh utama dalam tradisi sains Islam, terutama dalam pembentukan teknik eksperimental.\" Hlm. 465: \"Baru setelah pengaruh Ibn al-Haytham dan tokoh-tokoh lain terhadap tulisan fisika abad pertengahan diteliti secara serius, klaim Schramm bahwa Ibn al-Haytham adalah pendiri sejati fisika modern dapat dievaluasi.\""
+  ]
+}

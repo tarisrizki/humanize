@@ -1,0 +1,42 @@
+{
+  "user_id": "mode_populer",
+  "language": "id",
+  "style_mode": "populer",
+  "avg_sentence_length": 32.76,
+  "sentence_length_std": 17.1,
+  "flesch_reading_ease": 57.96,
+  "active_voice_ratio": 0.622,
+  "top_transitions": [
+    "karena",
+    "namun",
+    "justru",
+    "sebab",
+    "walaupun",
+    "bahkan",
+    "kemudian"
+  ],
+  "hedging_frequency": 0.087,
+  "emotion_register": "informal",
+  "favorite_phrases": [
+    "tempat nya",
+    "di sini",
+    "makanan nya",
+    "restoran ini",
+    "tempat ini",
+    "nya sangat",
+    "nya tidak",
+    "kota bandung",
+    "berada di",
+    "tidak bisa"
+  ],
+  "lexical_diversity": 0.3432,
+  "paragraph_length_avg": 1.23,
+  "few_shot_examples": [
+    "jika anda memiliki waktu terbatas untuk mencoba semua kuliner di kota bandung , datanglah ke paskal food market . tempat ini merupakan foodcourt di luar berisi kumpulan beraneka makanan khas bandung , jenis nya banyak sekali , mulai dari mie kocok , lumpia basah , aneka sate , mendoan mirasa , ronde , iga bakar sijangkung , nasi campur , bola ubi , pempek , pokok nya semua ada di sini . datanglah beramai2 dengan rekan anda .",
+    "niat nya sih nyapres biar ada penanda kebaikan di daerah daerah di mana mereka masih bisa dibujuk dengan indomie dan minyak goreng , mari kawal 2019 dari anjing anjing compeni , eh salah ya bukan jaman belanda , tapi sama zaman penjajahan . ha . ha .",
+    "saya mencoba makan siang di tempat ini karena direkomendasikan oleh teman saya , pertama masuk langsung berasa masuk ke dalam rumah bergaya zaman dahulu yang nyaman dan terkesan luas , saya mendapatkan tempat di gazebo di halaman belakang , saya langsung membayangkan , kalau malam kesini nya pasti akan lebih indah . saya memesan salmon goreng dan teman saya memesan nasi kebuli , rasa makanan nya sangat lezat .",
+    "gila ! enjoy banget nikmatin malam sambil romantis makan malam di the 18th restaurant . view aduhay dengan pancaran lampu kota yang memanjakan mata , makanan nya top setelah rekomendasi banget ditambah pelayanan mbak dela yang ramah dan cantik : tidak menyesal merayakan ulang tahun bareng pacar di sini .",
+    "lumayan . suasana nya nyunda banget , pakai piring dan gelas seng , juga terdapat makanan pelengkap lainnya seperti kue balok , arumanis , es goyobod , karedok , bandros , dan lain-lain . pas deh dengan kantong mahasiswa .",
+    "konsep restoran ini adalah restoran tempo dulu dengan peralatan makan nya pun masih serba zaman dahulu . dari piring hingga sendok . suka dengan menu yang ada di restoran ini , serba olahan tahu dan ada juga bermacam2 menu pilihan lagi , menu rekomendasi dari saya adalah tahu bodoh , dengan level pedas yang bisa kita pilih sendiri ."
+  ]
+}
