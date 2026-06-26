@@ -80,33 +80,6 @@ Ini adalah standar yang harus dicapai:
 ---
 """
 
-    # Blacklist kata-kata AI yang paling mudah terdeteksi
-    ai_blacklist = """
-## KATA DAN FRASA YANG DILARANG KERAS
-Kata-kata berikut adalah tanda tangan AI yang langsung 
-terdeteksi. JANGAN gunakan dalam bentuk apapun:
-
-DILARANG (Indonesia):
-merupakan, memiliki, berbagai macam, sehingga (kecuali 
-sangat diperlukan), serta, tersebut (ganti dengan nama 
-spesifik atau "ini/itu"), selain itu, oleh karena itu, 
-dengan demikian, hal ini menunjukkan, dapat disimpulkan, 
-secara keseluruhan, sangat penting, perlu dicatat bahwa, 
-di sisi lain, dalam hal ini, adapun, terkait dengan, 
-tidak hanya itu, lebih jauh lagi, pada dasarnya, 
-sejatinya, hakikatnya, tentunya, pastinya, sudah jelas.
-
-DILARANG (English):
-furthermore, moreover, additionally, consequently, 
-therefore, in conclusion, it is important to note, 
-notably, in order to, utilize, leverage, facilitate, 
-it is worth noting, this demonstrates, significantly, 
-crucial, essential, paramount, delve, straightforward.
-
-GANTI DENGAN: kata konkret, spesifik, dan tidak 
-terduga yang sesuai makna kalimat.
-"""
-
     if style_mode == "akademik":
         register_rules = f"""
 ## REGISTER: AKADEMIK
@@ -236,51 +209,59 @@ HINDARI: transisi yang terlalu formal, kalimat yang
 semua sama panjang, tidak ada "suara" penulis.
 """
 
-    return f"""Kamu adalah penulis manusia Indonesia yang berpengalaman. 
-Tugas: tulis ulang draf berikut agar terdengar 
-100% ditulis manusia — melewati GPTZero dan Turnitin.
+    return f"""
+## IDENTITAS & TUJUAN UTAMA
+Kamu penulis Indonesia berpengalaman. Tugas satu-satunya:
+tulis ulang draf agar TIDAK terdeteksi GPTZero dan Turnitin.
 
+## ATURAN ABSOLUT — BACA INI DULU SEBELUM APAPUN
+
+ATURAN 1 — MINIMUM 4 KALIMAT PER PARAGRAF:
+Setiap paragraf WAJIB minimal 4 kalimat. Jika paragraf
+asli hanya 2-3 kalimat, perluas dengan kalimat analitis
+atau observasi yang memperkaya — tapi jangan tambah fakta baru.
+
+ATURAN 2 — VARIASI PANJANG EKSTREM DALAM TIAP PARAGRAF:
+Setiap paragraf WAJIB punya kombinasi:
+  • 1 kalimat sangat pendek (3-6 kata)
+  • 1 kalimat sangat panjang (25-35 kata)  
+  • Sisanya medium (10-18 kata)
+Ini adalah aturan paling penting untuk lolos deteksi AI.
+
+ATURAN 3 — KATA YANG DILARANG KERAS:
+Jangan gunakan dalam bentuk apapun:
+merupakan, memiliki, berbagai, sehingga, serta, tersebut,
+selain itu, oleh karena itu, dengan demikian, hal ini,
+dapat disimpulkan, secara keseluruhan, sangat penting,
+perlu dicatat, dalam hal ini, adapun, tentunya, pastinya,
+furthermore, moreover, additionally, utilize, leverage,
+it is important, in conclusion, notably, straightforward.
+
+ATURAN 4 — STRUKTUR PARAGRAF NON-TEMPLATE:
+JANGAN gunakan: topic sentence → penjelasan → contoh → kesimpulan.
+LAKUKAN: mulai dari perspektif/observasi, lalu bangun ke argumen,
+atau mulai dari contoh spesifik, lalu generalisasi.
+
+ATURAN 5 — OUTPUT HANYA TEKS:
+Langsung mulai kalimat pertama. Tidak ada penjelasan,
+tidak ada bullet points, tidak ada catatan perubahan.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {lang_instruction}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {few_shot_text}
 
-{ai_blacklist}
-
 {register_rules}
 
-## ATURAN ANTI-DETEKSI WAJIB
-
-1. PERPLEXITY TINGGI — PILIH KATA YANG TIDAK TERDUGA:
-   AI selalu memilih kata yang paling "aman" dan 
-   probabilitasnya tinggi. Kamu harus memilih kata 
-   yang sedikit lebih mengejutkan — bukan kata aneh, 
-   tapi kata yang khas dan spesifik untuk konteks ini.
-   
-2. STRUKTUR PARAGRAF NON-TEMPLATE:
-   Jangan: topic sentence → penjelasan → contoh → 
-   kesimpulan (ini template AI yang paling mudah 
-   terdeteksi).
-   Lakukan: mulai dari mana saja — contoh dulu, 
-   atau observasi dulu, atau pertanyaan implisit dulu.
-
-3. ANTI-PLAGIARISME:
-   Tidak boleh ada 3 kata berurutan yang sama persis 
-   dengan draf asli. Ubah struktur kalimat, bukan 
-   hanya kata-katanya.
-
-4. JANGAN TAMBAH INFORMASI BARU:
-   Semua fakta harus dari draf asli. Tidak boleh 
-   menambah data, nama, atau klaim baru.
-
-5. PERTAHANKAN JUMLAH PARAGRAF:
-   Draf asli: {paragraph_count} paragraf.
-   Output WAJIB: persis {paragraph_count} paragraf.
-   Pisahkan dengan baris kosong.
-
-6. OUTPUT HANYA TEKS:
-   DILARANG: penjelasan, catatan, bullet points, 
-   daftar perubahan, atau komentar apapun.
-   Langsung mulai dengan kalimat pertama teks.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## PENGINGAT AKHIR — SEBELUM KAMU MULAI MENULIS:
+1. Sudahkah kamu pastikan setiap paragraf ≥4 kalimat?
+2. Sudahkah setiap paragraf punya kalimat pendek (3-6 kata)?
+3. Sudahkah kamu hindari SEMUA kata di ATURAN 3?
+4. Apakah struktur paragrafmu NON-TEMPLATE?
+Jika jawabannya tidak, tulis ulang dulu sebelum submit.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
 
@@ -489,7 +470,7 @@ def _replace_preserve_case(text: str, pattern: str, replacement: str) -> str:
         if orig and orig[0].isupper():
             return replacement[0].upper() + replacement[1:]
         return replacement
-    return re.sub(pattern, _replacer, text, flags=re.IGNORECASE)
+    return re.sub(pattern, _replacer, text, flags=re.IGNORECASE | re.MULTILINE)
 
 def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") -> str:
     """Apply aggressive post-processing to break AI detection patterns."""
@@ -506,6 +487,102 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
         text = re.sub(p, '', text, flags=re.IGNORECASE)
         
     if lang in ("id", "mixed"):
+        # ── Universal blacklist replacement (semua mode) ──
+        universal_replacements = [
+            # "merupakan" → ganti sesuai konteks
+            (r'(?i)\bini merupakan\b', 'ini adalah'),
+            (r'(?i)\byang merupakan\b', 'yang menjadi'),
+            (r'(?i)\bmerupakan sebuah\b', 'adalah sebuah'),
+            (r'(?i)\bmerupakan salah satu\b', 'menjadi salah satu'),
+            (r'(?i)\bmerupakan\b', 'menjadi'),
+
+            # "memiliki" → ganti dengan kata konkret
+            (r'(?i)\btidak memiliki\b', 'tidak punya'),
+            (r'(?i)\bmemiliki kemampuan\b', 'mampu'),
+            (r'(?i)\bmemiliki peran\b', 'berperan'),
+            (r'(?i)\bmemiliki dampak\b', 'berdampak'),
+            (r'(?i)\bmemiliki\b', 'punya'),
+
+            # "berbagai" → lebih spesifik
+            (r'(?i)\bberbagai macam\b', 'beragam'),
+            (r'(?i)\bberbagai\b', 'beragam'),
+
+            # "sehingga" → variasi
+            (r'(?i)\bsehingga\b', 'hingga'),
+
+            # "serta" → lebih natural
+            (r'(?i)\bserta\b', 'dan juga'),
+
+            # "tersebut" → ganti dengan "ini" atau "itu"
+            # Hati-hati: hanya jika tidak membingungkan
+            (r'(?i)\bhal tersebut\b', 'hal ini'),
+            (r'(?i)\bmasalah tersebut\b', 'masalah ini'),
+            (r'(?i)\bprogram tersebut\b', 'program ini'),
+            (r'(?i)\bkondisi tersebut\b', 'kondisi itu'),
+            (r'(?i)\bsituasi tersebut\b', 'situasi itu'),
+
+            # "hal ini" → lebih konkret
+            (r'(?i)\bhal ini menunjukkan bahwa\b', 'ini menandakan bahwa'),
+            (r'(?i)\bhal ini membuktikan\b', 'fakta ini membuktikan'),
+            (r'(?i)\bhal ini\b', 'kondisi ini'),
+
+            # "selain itu" → variasi
+            (r'(?i)^selain itu,?\s*', 'Di samping itu, '),
+            (r'(?i)\bselain itu,?\b', 'di samping itu,'),
+
+            # "oleh karena itu" → lebih tegas
+            (r'(?i)^oleh karena itu,?\s*', 'Karena itu, '),
+            (r'(?i)\boleh karena itu\b', 'karena itu'),
+
+            # "dengan demikian" → lebih natural
+            (r'(?i)^dengan demikian,?\s*', 'Dengan begitu, '),
+            (r'(?i)\bdengan demikian\b', 'dengan begitu'),
+
+            # "dapat disimpulkan" → lebih langsung
+            (r'(?i)\bdapat disimpulkan bahwa\b', 'intinya,'),
+            (r'(?i)\bdapat disimpulkan\b', 'dapat dikatakan'),
+
+            # "secara keseluruhan" → lebih segar
+            (r'(?i)^secara keseluruhan,?\s*', 'Bila dilihat secara utuh, '),
+            (r'(?i)\bsecara keseluruhan\b', 'secara menyeluruh'),
+
+            # "sangat penting" → lebih kuat
+            (r'(?i)\bsangat penting untuk\b', 'mendesak untuk'),
+            (r'(?i)\bsangat penting\b', 'amat krusial'),
+
+            # "perlu dicatat bahwa" → lebih natural
+            (r'(?i)\bperlu dicatat bahwa\b', 'perlu diperhatikan,'),
+            (r'(?i)\bperlu dicatat\b', 'patut dicermati'),
+
+            # "dalam hal ini" → lebih spesifik
+            (r'(?i)^dalam hal ini,?\s*', 'Dalam konteks ini, '),
+            (r'(?i)\bdalam hal ini\b', 'dalam konteks ini'),
+
+            # "adapun" → lebih natural
+            (r'(?i)^adapun\b,?\s*', 'Sementara itu, '),
+            (r'(?i)\badapun\b', 'sementara itu'),
+
+            # "tentunya" dan "pastinya" → lebih subtle
+            (r'(?i)\btentunya\b', 'tentu'),
+            (r'(?i)\bpastinya\b', 'sudah pasti'),
+
+            # "tidak hanya itu" → lebih mengalir
+            (r'(?i)\btidak hanya itu\b', 'lebih dari itu'),
+
+            # "di sisi lain" → variasi
+            (r'(?i)^di sisi lain,?\s*', 'Sebaliknya, '),
+            (r'(?i)\bdi sisi lain\b', 'sebaliknya'),
+        ]
+
+        # Apply universal replacements dengan preserve case
+        for pattern, replacement in universal_replacements:
+            text = _replace_preserve_case(text, pattern, replacement)
+
+        # Bersihkan double comma yang mungkin muncul
+        text = re.sub(r',\s*,', ',', text)
+        # Bersihkan spasi double
+        text = re.sub(r' {2,}', ' ', text)
+
         if style_mode == "akademik":
             replacements = [
                 (r"(?i)\bsecara keseluruhan\s*,?\s*", "Menilik gambaran besarnya, "),
@@ -515,8 +592,8 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
                 (r"(?i)\btersebut\b", "ini"),
             ]
             conversational_injects = [
-                "Perlu dicatat, ", "Menariknya, ", 
-                "Di sisi lain, ", "Lebih jauh, "
+                "Menariknya, ", "Patut dicermati, ", 
+                "Sebaliknya, ", "Lebih jauh, "
             ]
         elif style_mode == "profesional":
             replacements = [
@@ -526,8 +603,8 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
                 (r"(?i)\btersebut\b", "ini"),
             ]
             conversational_injects = [
-                "Perlu dicatat, ", "Menariknya, ", 
-                "Di sisi lain, ", "Lebih jauh, "
+                "Menariknya, ", "Patut dicermati, ", 
+                "Sebaliknya, ", "Lebih jauh, "
             ]
         elif style_mode == "kreatif":
             replacements = [
@@ -778,7 +855,98 @@ def _validate_output_quality(
     if bullet_lines > 3:
         return False
 
+    # Cek tidak ada kata yang sangat tidak lazim
+    # (kata <3 huruf berturut-turut atau mengandung 
+    #  konsonan >4 berturut-turut = kemungkinan hallucination)
+    suspicious_words = [
+        w for w in re.findall(r'\b\w+\b', text)
+        if len(w) > 4 and re.search(r'[^aeiouAEIOU]{5,}', w)
+        and w.lower() not in {'strength', 'through', 'straight',
+                               'scream', 'spring', 'strong',
+                               'kualitas', 'program', 'proses'}
+    ]
+    # Jika >3% kata mencurigakan → output buruk
+    total_words = len(re.findall(r'\b\w+\b', text))
+    if total_words > 0 and len(suspicious_words)/total_words > 0.03:
+        return False
+
     return True
+
+def _enforce_min_sentences(
+    text: str,
+    min_sentences: int = 4,
+) -> str:
+    """
+    Cek setiap paragraf — jika kurang dari min_sentences,
+    split kalimat panjang yang ada menjadi 2 kalimat.
+    Ini enforcement terakhir sebelum output ke user.
+    """
+    paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+    result = []
+
+    for para in paragraphs:
+        sentences = re.split(r'(?<=[.!?])\s+', para.strip())
+        sentences = [s for s in sentences if s.strip()]
+
+        # Jika sudah cukup, tidak perlu diapa-apakan
+        if len(sentences) >= min_sentences:
+            result.append(' '.join(sentences))
+            continue
+
+        # Coba split kalimat terpanjang menjadi 2
+        expanded = list(sentences)
+        attempts = 0
+        while len(expanded) < min_sentences and attempts < 3:
+            # Cari kalimat terpanjang
+            longest_idx = max(range(len(expanded)),
+                            key=lambda i: len(expanded[i].split()))
+            longest = expanded[longest_idx]
+            words = longest.split()
+
+            if len(words) < 12:
+                break  # Tidak bisa displit lagi
+
+            # Split di tengah pada titik natural
+            # Cari "yang", "dan", "sehingga", "karena" di tengah
+            mid = len(words) // 2
+            split_words = ['yang', 'dan', 'karena', 'sehingga',
+                          'namun', 'tetapi', 'meskipun', 'while',
+                          'which', 'and', 'but', 'because']
+
+            split_pos = None
+            # Cari di zona tengah (40%-60% panjang kalimat)
+            search_start = int(len(words) * 0.35)
+            search_end   = int(len(words) * 0.65)
+            for i in range(search_start, search_end):
+                if words[i].lower() in split_words:
+                    split_pos = i
+                    break
+
+            if split_pos:
+                part1 = ' '.join(words[:split_pos]).rstrip(',') + '.'
+                part2_words = words[split_pos:]
+                # Capitalize first word of part 2
+                if part2_words:
+                    part2_words[0] = part2_words[0].capitalize()
+                part2 = ' '.join(part2_words)
+                if not part2.endswith(('.', '!', '?')):
+                    part2 += '.'
+                expanded[longest_idx:longest_idx+1] = [part1, part2]
+            else:
+                # Split di titik tengah paksa
+                part1 = ' '.join(words[:mid]) + '.'
+                part2 = ' '.join(words[mid:])
+                if words[mid][0].islower():
+                    part2 = part2[0].upper() + part2[1:]
+                if not part2.endswith(('.', '!', '?')):
+                    part2 += '.'
+                expanded[longest_idx:longest_idx+1] = [part1, part2]
+
+            attempts += 1
+
+        result.append(' '.join(expanded))
+
+    return '\n\n'.join(result)
 
 def _validate_paragraph_count(
     text: str,
@@ -935,7 +1103,7 @@ async def apply_style_stream(
         result = await asyncio.wait_for(
             agent.run(
                 user_msg,
-                model_settings={"temperature": 1.0},
+                model_settings={"temperature": 1.2},
             ),
             timeout=60.0
         )
@@ -975,6 +1143,7 @@ async def apply_style_stream(
     text = _programmatic_sentence_humanize(text, style.language, style_mode)
     text = _apply_post_processing(text, style.language, style_mode)
     text = _validate_paragraph_count(text, paragraph_count, clean_draft)
+    text = _enforce_min_sentences(text, min_sentences=4)
 
     # ── Trigram check — Pass 2 jika overlap terlalu tinggi ───
     trigram_overlap = check_trigram_overlap(clean_draft, text)
@@ -1000,7 +1169,7 @@ async def apply_style_stream(
             result2 = await asyncio.wait_for(
                 agent.run(
                     pass2_msg,
-                    model_settings={"temperature": 1.0},
+                    model_settings={"temperature": 1.2},
                 ),
                 timeout=60.0
             )
@@ -1010,6 +1179,7 @@ async def apply_style_stream(
                 text2 = _apply_post_processing(text2, style.language, style_mode)
                 text2 = _programmatic_sentence_humanize(text2, style.language, style_mode)
                 text2 = _validate_paragraph_count(text2, paragraph_count, clean_draft)
+                text2 = _enforce_min_sentences(text2, min_sentences=4)
                 # Hanya pakai Pass 2 jika overlap-nya lebih kecil
                 new_overlap = check_trigram_overlap(clean_draft, text2)
                 if new_overlap < trigram_overlap:
@@ -1070,7 +1240,7 @@ async def apply_style(
         result = await asyncio.wait_for(
             agent.run(
                 user_msg,
-                model_settings={"temperature": 1.0},
+                model_settings={"temperature": 1.2},
             ),
             timeout=60.0
         )
@@ -1106,6 +1276,7 @@ async def apply_style(
     text = _programmatic_sentence_humanize(text, style.language, style_mode)
     text = _apply_post_processing(text, style.language, style_mode)
     text = _validate_paragraph_count(text, paragraph_count, clean_draft)
+    text = _enforce_min_sentences(text, min_sentences=4)
 
     # ── Trigram check — Pass 2 jika overlap terlalu tinggi ───
     trigram_overlap = check_trigram_overlap(clean_draft, text)
@@ -1129,7 +1300,7 @@ async def apply_style(
             result2 = await asyncio.wait_for(
                 agent.run(
                     pass2_msg,
-                    model_settings={"temperature": 1.0},
+                    model_settings={"temperature": 1.2},
                 ),
                 timeout=60.0
             )
@@ -1139,6 +1310,7 @@ async def apply_style(
                 text2 = _apply_post_processing(text2, style.language, style_mode)
                 text2 = _programmatic_sentence_humanize(text2, style.language, style_mode)
                 text2 = _validate_paragraph_count(text2, paragraph_count, clean_draft)
+                text2 = _enforce_min_sentences(text2, min_sentences=4)
                 new_overlap = check_trigram_overlap(clean_draft, text2)
                 if new_overlap < trigram_overlap:
                     text = text2
