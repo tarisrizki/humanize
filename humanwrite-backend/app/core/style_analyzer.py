@@ -368,13 +368,15 @@ def _extract_few_shot_examples(texts: list[str], avg_sentence_length: float, max
 
 # ── Main analysis function ───────────────────────────────────────────────────
 
-def analyze_style(texts: list[str], user_id: str = "anonymous") -> StyleProfile:
+def analyze_style(texts_id: list[str], texts_en: list[str], user_id: str = "anonymous") -> StyleProfile:
     """Analyze a collection of texts and produce a StyleProfile incrementally."""
+    texts = texts_id + texts_en
     if not texts:
         return StyleProfile(user_id=user_id)
 
-    # Detect language using a sample
-    lang = _detect_language(texts)
+    # Base language is ID as it's an Indonesian-first app, but it handles both
+    lang = "id"
+
 
     all_sent_lens = []
     flesch_scores = []
@@ -502,8 +504,9 @@ def analyze_style(texts: list[str], user_id: str = "anonymous") -> StyleProfile:
     lex_div = round(len(unique_tokens) / len(all_word_tokens), 4) if all_word_tokens else 0.0
     para_avg = round(total_sentences / total_paragraphs, 2) if total_paragraphs else 0.0
     
-    # Few-shot examples
-    few_shot = _extract_few_shot_examples(texts, avg_sl, max_words=500)
+    # Few-shot examples per language
+    few_shot_id = _extract_few_shot_examples(texts_id, avg_sl, max_words=500)
+    few_shot_en = _extract_few_shot_examples(texts_en, avg_sl, max_words=500)
 
     return StyleProfile(
         user_id=user_id,
@@ -518,5 +521,6 @@ def analyze_style(texts: list[str], user_id: str = "anonymous") -> StyleProfile:
         favorite_phrases=fav_phrases,
         lexical_diversity=lex_div,
         paragraph_length_avg=para_avg,
-        few_shot_examples=few_shot,
+        few_shot_examples_id=few_shot_id,
+        few_shot_examples_en=few_shot_en,
     )

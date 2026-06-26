@@ -19,6 +19,12 @@
 | AI Rewriting | PydanticAI + Gemini 2.5 Flash |
 | GUI | Streamlit |
 | Package Manager | uv |
+| Dataset Extraction | HuggingFace Datasets & Pandas |
+
+## Key Features
+- **Bilingual Support**: Fully supports English and Indonesian with language-specific Flesch scoring and NLP engines.
+- **Language-Aware Few-Shots**: Automatically detects draft language (via `langdetect`) and injects matching reference texts (English few-shots for English drafts, Indonesian for Indonesian).
+- **CSV Data Architecture**: Uses single-file CSVs for large 8,000+ document datasets rather than splitting into thousands of tiny `.txt` files, making Git operations instantaneous.
 
 ## Quick Start
 
@@ -82,6 +88,8 @@ The analyzer extracts these metrics from your writing:
 - **lexical_diversity** — Vocabulary variety (Type-Token Ratio)
 - **paragraph_length_avg** — Average sentences per paragraph
 - **language** — Auto-detected: English (`en`) or Indonesian (`id`)
+- **few_shot_examples_id** — Top reference texts closest to the mean (Indonesian)
+- **few_shot_examples_en** — Top reference texts closest to the mean (English)
 
 ## Project Structure
 
@@ -105,8 +113,11 @@ write/
 │   │   └── storage/
 │   │       └── json_store.py           # JSON file storage
 │   ├── data/                           # Runtime data (auto-created)
-│   │   ├── corpus/                     # Uploaded text files
-│   │   ├── profiles/                   # Generated style profiles
+│   │   ├── corpus_akademik.csv         # 2,000 texts bilingual dataset
+│   │   ├── corpus_profesional.csv      # 2,000 texts bilingual dataset
+│   │   ├── corpus_populer.csv          # 2,000 texts bilingual dataset
+│   │   ├── corpus_kreatif.csv          # 1,000+ texts bilingual dataset
+│   │   ├── profiles/                   # Generated JSON style profiles
 │   │   └── outputs/                    # Processing results
 │   ├── pyproject.toml
 │   ├── .env.example

@@ -1,1 +1,0 @@
-Peneliti awal mengembangkan algoritme yang meniru penalaran langkah-demi-langkah manusia. AI modern menangani masalah kompleks menggunakan metode probabilistik dan algoritme pencarian (seperti algoritme pencarian grafik pohon atau metode Monte Carlo) untuk menemukan solusi optimal di bawah ketidakpastian informasi.

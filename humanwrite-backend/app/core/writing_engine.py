@@ -12,6 +12,7 @@ from typing import AsyncGenerator
 
 from pydantic_ai import Agent
 from pydantic_ai.models.fallback import FallbackModel
+from langdetect import detect
 
 from app.config import settings
 from app.models.schemas import ProcessedText
@@ -40,21 +41,21 @@ def _clean_input_draft(draft: str) -> str:
     return draft.strip()
 
 
-def _build_system_prompt(style: StyleProfile, paragraph_count: int) -> str:
+def _build_system_prompt(style: StyleProfile, paragraph_count: int, input_lang: str) -> str:
     style_mode = getattr(style, 'style_mode', 'populer')
 
-    if style.language == "id":
+    if input_lang == "id":
         lang_instruction = "Tulis dalam Bahasa Indonesia yang baik dan benar sesuai EYD."
-    elif style.language == "mixed":
-        lang_instruction = "Pertahankan pola campur kode (Indonesia-Inggris) yang sama."
+        active_few_shots = style.few_shot_examples_id
     else:
         lang_instruction = "Write in natural English."
+        active_few_shots = style.few_shot_examples_en
 
     few_shot_text = ""
-    if style.few_shot_examples:
+    if active_few_shots:
         examples_str = "\n\n".join([
             f"Contoh {i+1}:\n{ex}"
-            for i, ex in enumerate(style.few_shot_examples)
+            for i, ex in enumerate(active_few_shots)
         ])
         few_shot_text = f"""
 ## PANDUAN GAYA PENULISAN (WAJIB DIIKUTI)
@@ -690,7 +691,13 @@ async def apply_style_stream(
 ) -> AsyncGenerator[str, None]:
     clean_draft = _clean_input_draft(draft)
     paragraph_count = _count_paragraphs(clean_draft)
-    system_prompt = _build_system_prompt(style, paragraph_count)
+    
+    try:
+        input_lang = "id" if detect(clean_draft[:2000]) in ("id", "ms") else "en"
+    except:
+        input_lang = "id"
+        
+    system_prompt = _build_system_prompt(style, paragraph_count, input_lang)
     style_mode = getattr(style, 'style_mode', 'populer')
 
     # Plain text agent — TANPA output_type
@@ -751,7 +758,13 @@ async def apply_style(
 ) -> ProcessedText:
     clean_draft = _clean_input_draft(draft)
     paragraph_count = _count_paragraphs(clean_draft)
-    system_prompt = _build_system_prompt(style, paragraph_count)
+    
+    try:
+        input_lang = "id" if detect(clean_draft[:2000]) in ("id", "ms") else "en"
+    except:
+        input_lang = "id"
+        
+    system_prompt = _build_system_prompt(style, paragraph_count, input_lang)
     style_mode = getattr(style, 'style_mode', 'populer')
 
     agent = Agent(

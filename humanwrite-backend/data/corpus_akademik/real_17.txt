@@ -1,1 +1,0 @@
-Pemrosesan bahasa alami (NLP) memungkinkan mesin membaca, memahami, menerjemahkan, dan memproduksi bahasa manusia. Model bahasa modern menggunakan arsitektur statistik berskala besar untuk menangani sintaksis dan semantik teks.

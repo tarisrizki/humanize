@@ -68,7 +68,11 @@ class StyleProfile(BaseModel):
     )
 
     # Few-shot Prompting
-    few_shot_examples: list[str] = Field(
+    few_shot_examples_id: list[str] = Field(
         default_factory=list,
-        description="Representative paragraphs from the corpus used as few-shot examples",
+        description="Representative Indonesian paragraphs used as few-shot examples",
+    )
+    few_shot_examples_en: list[str] = Field(
+        default_factory=list,
+        description="Representative English paragraphs used as few-shot examples",
     )
