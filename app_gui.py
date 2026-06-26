@@ -8,9 +8,11 @@ import difflib
 import os
 import io
 import time
+import json
 
 import requests
 import streamlit as st
+import pandas as pd
 
 # ── Page Configuration ────────────────────────────────────────────────────────
 
@@ -176,6 +178,28 @@ def get_global_style() -> dict:
         pass
     return {}
 
+def process_stream(response):
+    """Generator to process the SSE streaming response from the backend."""
+    current_event = None
+    for line in response.iter_lines(decode_unicode=True):
+        if not line:
+            continue
+            
+        if line.startswith("event: "):
+            current_event = line[len("event: "):].strip()
+        elif line.startswith("data: "):
+            data_str = line[len("data: "):]
+            if current_event == "text":
+                try:
+                    chunk = json.loads(data_str)
+                    yield chunk
+                except:
+                    pass
+            elif current_event == "metrics":
+                try:
+                    st.session_state["last_metrics"] = json.loads(data_str)
+                except json.JSONDecodeError:
+                    pass
 
 # ── Header ────────────────────────────────────────────────────────────────────
 
@@ -207,7 +231,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown(
         "<small style='color: #666;'>HumanWrite AI v0.2.0<br>"
-        "Powered by Gemini 2.5 Flash</small>",
+        "Powered by Groq LLaMA 3.3-70b</small>",
         unsafe_allow_html=True,
     )
 
@@ -217,216 +241,208 @@ with st.sidebar:
 profile = get_global_style() if backend_online else {}
 
 if profile:
-    with st.expander("📊 View Global Style Profile Metrics", expanded=False):
-        st.markdown(f"**Primary Language:** `{profile.get('language', 'en').upper()}`")
+    with st.expander("📊 Lihat Metrik Profil Global", expanded=False):
+        st.markdown(f"**Bahasa Utama:** `{profile.get('language', 'id').upper()}`")
         
         # Metric cards
         cols = st.columns(4)
         with cols[0]:
-            st.markdown(f"""<div class="metric-card"><div class="metric-label">Avg Sentence Length</div><div class="metric-value">{profile.get('avg_sentence_length', 0):.1f}</div></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class="metric-card"><div class="metric-label">Rata-rata Kata/Kalimat</div><div class="metric-value">{profile.get('avg_sentence_length', 0):.1f}</div></div>""", unsafe_allow_html=True)
         with cols[1]:
             st.markdown(f"""<div class="metric-card"><div class="metric-label">Readability (Flesch)</div><div class="metric-value">{profile.get('flesch_reading_ease', 0):.1f}</div></div>""", unsafe_allow_html=True)
         with cols[2]:
-            st.markdown(f"""<div class="metric-card"><div class="metric-label">Active Voice</div><div class="metric-value">{profile.get('active_voice_ratio', 0):.0%}</div></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class="metric-card"><div class="metric-label">Kalimat Aktif</div><div class="metric-value">{profile.get('active_voice_ratio', 0):.0%}</div></div>""", unsafe_allow_html=True)
         with cols[3]:
             st.markdown(f"""<div class="metric-card"><div class="metric-label">Register</div><div class="metric-value" style="font-size:1.2rem;">{profile.get('emotion_register', 'neutral').title()}</div></div>""", unsafe_allow_html=True)
 
-st.markdown("### Paste Your LLM-Generated Draft")
-st.caption("Enter the AI-generated text you want to rewrite using our pre-trained Human Style.")
-
-style_mode_options = ["populer", "akademik", "profesional", "kreatif"]
-style_mode_val = st.selectbox(
-    "Select Style Mode",
-    options=style_mode_options,
-    index=0,
-)
-
-draft_text = st.text_area(
-    "Draft text",
-    height=250,
-    placeholder="Paste your AI-generated draft here...",
-    label_visibility="collapsed",
-)
-
-humanize_btn = st.button(
-    "🪄 Humanize Draft",
-    use_container_width=True,
-    disabled=not draft_text or not backend_online or not profile,
-)
-
 if not profile and backend_online:
-    st.error("Global Style Profile not found. Please run the training script on the backend.")
+    st.error("Global Style Profile tidak ditemukan. Harap jalankan script training di backend.")
 
-import json
+tab1, tab2, tab3 = st.tabs([
+    "✍️ Humanize", 
+    "📊 Evaluasi", 
+    "📜 History"
+])
 
-def process_stream(response):
-    """Generator to process the SSE streaming response from the backend."""
-    # We can use a simple manual SSE parser since we only expect 'event' and 'data' lines
-    # Response.iter_lines is safe for this.
-    current_event = None
-    for line in response.iter_lines(decode_unicode=True):
-        if not line:
-            continue
-            
-        if line.startswith("event: "):
-            current_event = line[len("event: "):].strip()
-        elif line.startswith("data: "):
-            data_str = line[len("data: "):]
-            if current_event == "text":
-                try:
-                    # We sent json-encoded chunks to be safe with newlines
-                    chunk = json.loads(data_str)
-                    yield chunk
-                except:
-                    pass
-            elif current_event == "metrics":
-                try:
-                    st.session_state["last_metrics"] = json.loads(data_str)
-                except json.JSONDecodeError:
-                    pass
+# ── Tab 1: Humanize ───────────────────────────────────────────────────────────
+with tab1:
+    st.markdown("### Masukkan Teks AI")
+    st.caption("Tempel draf yang dihasilkan AI di sini untuk ditulis ulang menjadi lebih natural.")
 
-if humanize_btn and draft_text:
-    with st.spinner("✨ Rewriting with human voice..."):
-        try:
-            process_resp = requests.post(
-                f"{BACKEND_URL}/api/v1/process",
-                json={"draft": draft_text, "style_mode": style_mode_val},
-                stream=True,
-                timeout=120,
-            )
-            process_resp.raise_for_status()
-            
-            st.markdown("### ✅ Humanized Result")
-            st.session_state["last_metrics"] = None
-            
-            # Create a placeholder for the streamed text
-            text_placeholder = st.empty()
-            
-            # Consume the stream
-            final_text = text_placeholder.write_stream(process_stream(process_resp))
-            
-            st.session_state["last_result"] = final_text
-            st.session_state["last_draft"] = draft_text
-            st.session_state["style_mode_val"] = style_mode_val
-            
-            # Log the evaluation to get a record_id
-            eval_resp = requests.post(
-                f"{BACKEND_URL}/api/v1/evaluate/run",
-                json={
-                    "style_mode": style_mode_val,
-                    "language": profile.get("language", "id"),
-                    "original_text": draft_text,
-                    "output_text": final_text,
-                },
-                timeout=10,
-            )
-            if eval_resp.status_code == 200:
-                st.session_state["last_record_id"] = eval_resp.json().get("record_id")
-            
-        except Exception as e:
-            st.error(f"Processing failed: {e}")
-            st.stop()
+    style_mode_options = ["populer", "akademik", "profesional", "kreatif"]
+    style_mode_val = st.selectbox(
+        "Pilih Mode Gaya Penulisan",
+        options=style_mode_options,
+        index=0,
+    )
 
-# Display results
-if st.session_state.get("last_result"):
-    final_text = st.session_state["last_result"]
-    original_draft = st.session_state.get("last_draft", "")
-    metrics = st.session_state.get("last_metrics") or {}
-    changes = metrics.get("changes_made", [])
+    draft_text = st.text_area(
+        "Teks Draf",
+        height=250,
+        placeholder="Tempel draf AI Anda di sini...",
+        label_visibility="collapsed",
+    )
 
-    st.markdown("---")
-    
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.subheader("Changes Made")
-        if changes:
-            for change in changes:
-                st.markdown(f"- {change}")
-        else:
-            st.info("No major changes documented.")
-            
-    with col2:
-        st.subheader("Original Draft")
-        st.info(original_draft)
+    humanize_btn = st.button(
+        "🪄 Humanize Teks",
+        use_container_width=True,
+        disabled=not draft_text or not backend_online or not profile,
+    )
 
-
-
-    # ── Side by side: Original vs Final ──────────────────────────
-    st.markdown("#### 📝 Comparison")
-    left, right = st.columns(2)
-
-    with left:
-        st.markdown("**Original Draft**")
-        st.text_area(
-            "Original",
-            value=original_draft,
-            height=200,
-            disabled=True,
-            label_visibility="collapsed",
-        )
-
-    with right:
-        st.markdown("**Humanized Text**")
-        st.text_area(
-            "Final",
-            value=final_text,
-            height=200,
-            disabled=True,
-            label_visibility="collapsed",
-        )
-
-    # ── Diff View ─────────────────────────────────────────────────
-    with st.expander("🔀 Diff View (line-by-line changes)", expanded=True):
-        diff = difflib.unified_diff(
-            original_draft.splitlines(keepends=True),
-            final_text.splitlines(keepends=True),
-            fromfile="Original Draft",
-            tofile="Humanized Text",
-            lineterm="",
-        )
-        diff_lines = list(diff)
-
-        if diff_lines:
-            html_parts = []
-            for line in diff_lines:
-                line_escaped = (
-                    line.replace("&", "&amp;")
-                    .replace("<", "&lt;")
-                    .replace(">", "&gt;")
+    if humanize_btn and draft_text:
+        with st.spinner("✨ Sedang menulis ulang dengan gaya manusia..."):
+            try:
+                process_resp = requests.post(
+                    f"{BACKEND_URL}/api/v1/process",
+                    json={"draft": draft_text, "style_mode": style_mode_val},
+                    stream=True,
+                    timeout=120,
                 )
-                if line.startswith("+") and not line.startswith("+++"):
-                    html_parts.append(f'<span class="diff-add">{line_escaped}</span>')
-                elif line.startswith("-") and not line.startswith("---"):
-                    html_parts.append(f'<span class="diff-remove">{line_escaped}</span>')
-                elif line.startswith("@@"):
-                    html_parts.append(f'<span style="color:#8b949e;">{line_escaped}</span>')
-                else:
-                    html_parts.append(line_escaped)
+                process_resp.raise_for_status()
+                
+                st.markdown("### ✅ Hasil Humanize")
+                st.session_state["last_metrics"] = None
+                
+                # Create a placeholder for the streamed text
+                text_placeholder = st.empty()
+                
+                # Consume the stream
+                final_text = text_placeholder.write_stream(process_stream(process_resp))
+                
+                st.session_state["last_result"] = final_text
+                st.session_state["last_draft"] = draft_text
+                st.session_state["style_mode_val"] = style_mode_val
+                
+                # Log the evaluation to get a record_id
+                eval_resp = requests.post(
+                    f"{BACKEND_URL}/api/v1/evaluate/run",
+                    json={
+                        "style_mode": style_mode_val,
+                        "language": profile.get("language", "id"),
+                        "original_text": draft_text,
+                        "output_text": final_text,
+                    },
+                    timeout=10,
+                )
+                if eval_resp.status_code == 200:
+                    st.session_state["last_record_id"] = eval_resp.json().get("record_id")
+                
+            except Exception as e:
+                st.error(f"Proses gagal: {e}")
 
-            diff_html = "<br>".join(html_parts)
-            st.markdown(
-                f'<div class="diff-container">{diff_html}</div>',
-                unsafe_allow_html=True,
+    # Display results
+    if st.session_state.get("last_result"):
+        final_text = st.session_state["last_result"]
+        original_draft = st.session_state.get("last_draft", "")
+        metrics = st.session_state.get("last_metrics") or {}
+        changes = metrics.get("changes_made", [])
+
+        st.markdown("---")
+        
+        # Word count
+        word_count_orig = len(original_draft.split())
+        word_count_final = len(final_text.split())
+        st.caption(f"**Jumlah Kata:** Draf Asli ({word_count_orig}) ➡️ Hasil Humanize ({word_count_final})")
+
+        # ── Diff View ─────────────────────────────────────────────────
+        with st.expander("🔀 Tampilan Diff (perubahan baris per baris)", expanded=True):
+            diff = difflib.unified_diff(
+                original_draft.splitlines(keepends=True),
+                final_text.splitlines(keepends=True),
+                fromfile="Draf Asli",
+                tofile="Teks Hasil Humanize",
+                lineterm="",
             )
-        else:
-            st.info("No differences detected — the text may already match your style.")
+            diff_lines = list(diff)
 
-    # ── Changes List ──────────────────────────────────────────────
-    if changes:
-        st.markdown("#### 📋 Changes Made")
-        for i, change in enumerate(changes, 1):
-            st.markdown(
-                f'<div class="change-item">💡 {change}</div>',
-                unsafe_allow_html=True,
+            if diff_lines:
+                html_parts = []
+                for line in diff_lines:
+                    line_escaped = (
+                        line.replace("&", "&amp;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;")
+                    )
+                    if line.startswith("+") and not line.startswith("+++"):
+                        html_parts.append(f'<span class="diff-add">{line_escaped}</span>')
+                    elif line.startswith("-") and not line.startswith("---"):
+                        html_parts.append(f'<span class="diff-remove">{line_escaped}</span>')
+                    elif line.startswith("@@"):
+                        html_parts.append(f'<span style="color:#8b949e;">{line_escaped}</span>')
+                    else:
+                        html_parts.append(line_escaped)
+
+                diff_html = "<br>".join(html_parts)
+                st.markdown(
+                    f'<div class="diff-container">{diff_html}</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.info("Tidak ada perbedaan signifikan yang terdeteksi.")
+
+        # ── Changes List ──────────────────────────────────────────────
+        if changes:
+            with st.expander("📋 Perubahan yang Dilakukan", expanded=True):
+                for i, change in enumerate(changes, 1):
+                    st.markdown(
+                        f'<div class="change-item">💡 {change}</div>',
+                        unsafe_allow_html=True,
+                    )
+
+        # ── Export Buttons ────────────────────────────────────────────
+        st.markdown("---")
+        st.markdown("#### 📥 Ekspor & Salin")
+        export_col1, export_col2, export_col3 = st.columns(3)
+
+        with export_col1:
+            st.download_button(
+                label="📄 Download .txt",
+                data=final_text,
+                file_name=f"humanized_global_{int(time.time())}.txt",
+                mime="text/plain",
+                use_container_width=True,
             )
 
-    # ── LLM Judge ─────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("#### 🤖 LLM as a Judge Evaluation")
-    if "last_record_id" in st.session_state:
-        if st.button("🤖 Jalankan LLM Judge", use_container_width=True):
-            with st.spinner("Llama-3.3-70b sedang mengevaluasi..."):
+        with export_col2:
+            try:
+                from docx import Document as DocxDocument
+
+                doc = DocxDocument()
+                doc.add_heading("HumanWrite AI — Hasil Humanize", level=1)
+                doc.add_paragraph("Style: Global Pre-trained Model")
+                doc.add_heading("Teks Hasil Humanize", level=2)
+                for para in final_text.split("\n\n"):
+                    doc.add_paragraph(para)
+
+                buffer = io.BytesIO()
+                doc.save(buffer)
+                buffer.seek(0)
+
+                st.download_button(
+                    label="📝 Download .docx",
+                    data=buffer,
+                    file_name=f"humanized_global_{int(time.time())}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                )
+            except ImportError:
+                st.button("📝 .docx (install python-docx dahulu)", disabled=True, use_container_width=True)
+
+        with export_col3:
+            st.code(final_text, language='text')
+
+# ── Tab 2: Evaluasi ───────────────────────────────────────────────────────────
+with tab2:
+    st.markdown("### 🤖 Evaluasi LLM Judge & Anti-Deteksi")
+    if "last_record_id" in st.session_state and st.session_state.get("last_result"):
+        original_draft = st.session_state.get("last_draft", "")
+        final_text = st.session_state.get("last_result", "")
+        
+        # LLM Judge
+        st.markdown("#### ⚖️ LLM as a Judge")
+        st.caption("Evaluasi kualitas hasil humanize menggunakan penalaran LLM Llama-3.3.")
+        if st.button("🤖 Jalankan Evaluasi Otomatis", use_container_width=True):
+            with st.spinner("Llama-3.3-70b sedang mengevaluasi kualitas tulisan..."):
                 try:
                     resp = requests.post(
                         f"{BACKEND_URL}/api/v1/evaluate/judge",
@@ -445,7 +461,7 @@ if st.session_state.get("last_result"):
                     score = data["overall_score"]
                     color = "green" if score >= 70 else "orange" if score >= 50 else "red"
                     
-                    st.markdown(f"### Overall Score: :{color}[{score}/100]")
+                    st.markdown(f"### Skor Keseluruhan: :{color}[{score}/100]")
                     
                     col_j1, col_j2 = st.columns(2)
                     breakdown = data["breakdown"]
@@ -463,28 +479,26 @@ if st.session_state.get("last_result"):
                             st.caption(d["reason"])
                             
                     if breakdown["critical_issues"]:
-                        st.error("⚠️ Critical Issues:\n" + "\n".join(f"• {i}" for i in breakdown["critical_issues"]))
+                        st.error("⚠️ Isu Kritis:\n" + "\n".join(f"• {i}" for i in breakdown["critical_issues"]))
                         
-                    st.success(f"✅ Highlight: *{breakdown['highlight']}*")
-                    st.warning(f"⚠️ Worst: *{breakdown['worst_sentence']}*")
+                    st.success(f"✅ Sorotan Terbaik: *{breakdown['highlight']}*")
+                    st.warning(f"⚠️ Paling AI: *{breakdown['worst_sentence']}*")
                 except Exception as e:
                     st.error(f"Gagal menjalankan LLM Judge: {e}")
-    else:
-        st.info("Record ID tidak ditemukan. Harap humanize teks terlebih dahulu.")
-        
-    # ── GPTZero Manual Input ───────────────────────────────────────
-    st.markdown("---")
-    st.markdown("#### 🕵️ GPTZero Manual Input")
-    if "last_record_id" in st.session_state:
+                    
+        # GPTZero Form
+        st.markdown("---")
+        st.markdown("#### 🕵️ GPTZero Manual Input")
+        st.caption("Masukkan skor dari hasil pengecekan manual di situs GPTZero.")
         with st.form("gptzero_form"):
             st.markdown(f"**Record ID**: {st.session_state['last_record_id']}")
             col_g1, col_g2 = st.columns(2)
             with col_g1:
-                gptzero_before = st.slider("GPTZero Score (Original % AI)", 0, 100, 50, key="gptzero_before")
+                gptzero_before = st.slider("Skor GPTZero (% AI) Draf Asli", 0, 100, 50, key="gptzero_before")
             with col_g2:
-                gptzero_after = st.slider("GPTZero Score (Humanized % AI)", 0, 100, 0, key="gptzero_after")
+                gptzero_after = st.slider("Skor GPTZero (% AI) Hasil Humanize", 0, 100, 0, key="gptzero_after")
             
-            submitted = st.form_submit_button("Simpan Skor GPTZero")
+            submitted = st.form_submit_button("Simpan Skor Anti-Deteksi")
             if submitted:
                 try:
                     resp = requests.patch(
@@ -495,57 +509,34 @@ if st.session_state.get("last_result"):
                         }
                     )
                     resp.raise_for_status()
-                    st.success("✅ Skor GPTZero berhasil disimpan!")
+                    st.toast("✅ Skor GPTZero berhasil disimpan di riwayat!")
+                    st.success("Skor GPTZero berhasil diperbarui!")
                 except Exception as e:
                     st.error(f"Gagal menyimpan skor GPTZero: {e}")
     else:
-        st.info("Record ID tidak ditemukan.")
+        st.info("Anda belum melakukan proses Humanize. Silakan gunakan tab 'Humanize' terlebih dahulu.")
 
-    # ── Export Buttons ────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("#### 📥 Export")
-    export_col1, export_col2, export_col3 = st.columns(3)
 
-    with export_col1:
-        st.download_button(
-            label="📄 Download as .txt",
-            data=final_text,
-            file_name=f"humanized_global_{int(time.time())}.txt",
-            mime="text/plain",
-            use_container_width=True,
-        )
-
-    with export_col2:
+# ── Tab 3: History ────────────────────────────────────────────────────────────
+with tab3:
+    st.markdown("### 📜 Riwayat Evaluasi")
+    st.caption("Daftar lengkap hasil proses dan evaluasi yang pernah dijalankan.")
+    
+    if st.button("🔄 Segarkan Data Riwayat"):
         try:
-            from docx import Document as DocxDocument
-
-            doc = DocxDocument()
-            doc.add_heading("HumanWrite AI — Humanized Text", level=1)
-            doc.add_paragraph("Style: Global Pre-trained Model")
-            doc.add_heading("Humanized Text", level=2)
-            for para in final_text.split("\n\n"):
-                doc.add_paragraph(para)
-
-            buffer = io.BytesIO()
-            doc.save(buffer)
-            buffer.seek(0)
-
-            st.download_button(
-                label="📝 Download as .docx",
-                data=buffer,
-                file_name=f"humanized_global_{int(time.time())}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True,
-            )
-        except ImportError:
-            st.button("📝 .docx (install python-docx)", disabled=True, use_container_width=True)
-
-    with export_col3:
-        # Copy to clipboard via text area trick
-        st.text_area(
-            "Copy text",
-            value=final_text,
-            height=68,
-            help="Select all and copy (Ctrl+A, Ctrl+C)",
-            label_visibility="collapsed",
-        )
+            resp = requests.get(f"{BACKEND_URL}/api/v1/evaluate/history")
+            if resp.status_code == 200:
+                history_data = resp.json()
+                if history_data:
+                    # Clean up data for dataframe
+                    df = pd.DataFrame(history_data)
+                    # Convert to simpler columns
+                    cols_to_show = ["id", "timestamp", "style_mode", "burstiness", "ai_word_reduction", "judge_score", "gptzero_before", "gptzero_after"]
+                    existing_cols = [c for c in cols_to_show if c in df.columns]
+                    st.dataframe(df[existing_cols].sort_values(by="id", ascending=False), use_container_width=True)
+                else:
+                    st.info("Belum ada data evaluasi di database.")
+        except Exception as e:
+            st.error(f"Gagal mengambil riwayat: {e}")
+    else:
+        st.info("Klik tombol di atas untuk memuat riwayat terbaru dari database.")
