@@ -4,9 +4,9 @@
 
 ## How It Works
 
-1. **Upload** 1–3 documents that represent your writing style (TXT, DOCX, PDF)
-2. **Analyze** — The system extracts a quantitative Style Profile from your writing
-3. **Humanize** — Paste any AI-generated draft and get it rewritten in *your* voice
+1. **Train** — The system analyzes a corpus of 8,000+ texts (Wikipedia, News, Papers, Fiction) to extract quantitative Style Profiles using Stanza & spaCy.
+2. **Humanize** — Paste any AI-generated draft, select your desired style mode (Akademik, Profesional, Populer, Kreatif) and get it rewritten with natural human burstiness.
+3. **Evaluate** — Built-in LLM Judge automatically scores the output across 5 dimensions, and GPTZero scores can be manually tracked in the database.
 
 ## Tech Stack
 
@@ -69,9 +69,12 @@ Navigate to [http://localhost:8501](http://localhost:8501) in your browser.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Health check & model status |
-| `POST` | `/api/v1/upload` | Upload documents (multipart form) |
-| `POST` | `/api/v1/analyze` | Analyze writing style from corpus |
-| `POST` | `/api/v1/process` | Rewrite draft with user's style |
+| `GET` | `/api/v1/style` | Get the currently active global Style Profile |
+| `POST` | `/api/v1/process` | Rewrite draft using streaming Server-Sent Events (SSE) |
+| `POST` | `/api/v1/evaluate/run` | Log a humanize run to the DB |
+| `POST` | `/api/v1/evaluate/judge` | Run the Llama-3.3 LLM Judge |
+| `PATCH`| `/api/v1/evaluate/{id}/gptzero` | Update GPTZero scores |
+| `GET` | `/api/v1/evaluate/history` | Get all past evaluation results |
 
 ## Style Profile Metrics
 

@@ -723,9 +723,12 @@ async def apply_style_stream(
     )
 
     try:
-        result = await agent.run(
-            user_msg,
-            model_settings={"temperature": 1.5},
+        result = await asyncio.wait_for(
+            agent.run(
+                user_msg,
+                model_settings={"temperature": 1.5},
+            ),
+            timeout=60.0
         )
         full_text = str(result.output).strip() if result.output else ""
     except Exception as e:
@@ -788,9 +791,12 @@ async def apply_style(
     )
 
     try:
-        result = await agent.run(
-            user_msg,
-            model_settings={"temperature": 1.5},
+        result = await asyncio.wait_for(
+            agent.run(
+                user_msg,
+                model_settings={"temperature": 1.5},
+            ),
+            timeout=60.0
         )
         full_text = str(result.output).strip() if result.output else ""
     except Exception:

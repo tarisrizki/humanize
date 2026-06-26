@@ -10,7 +10,7 @@ def test_build_system_prompt_en():
         avg_sentence_length=15.5,
         emotion_register="formal"
     )
-    prompt = _build_system_prompt(profile, paragraph_count=2)
+    prompt = _build_system_prompt(profile, paragraph_count=2, input_lang="en")
     assert "Write in natural English." in prompt
 
 def test_build_system_prompt_id():
@@ -18,7 +18,7 @@ def test_build_system_prompt_id():
         user_id="test2",
         language="id"
     )
-    prompt = _build_system_prompt(profile, paragraph_count=1)
+    prompt = _build_system_prompt(profile, paragraph_count=1, input_lang="id")
     assert "Tulis dalam Bahasa Indonesia yang baik dan benar sesuai EYD." in prompt
 
 @pytest.mark.asyncio

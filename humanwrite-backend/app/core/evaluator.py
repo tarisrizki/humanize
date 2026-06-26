@@ -290,6 +290,7 @@ def run_llm_judge(
             model="llama-3.3-70b-versatile",
             temperature=0.0,
             messages=[{"role": "user", "content": prompt}],
+            timeout=60.0,
         )
 
         raw = response.choices[0].message.content.strip()
