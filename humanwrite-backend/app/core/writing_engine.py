@@ -147,6 +147,34 @@ BURSTINESS (WAJIB):
   yang mengalir (18-25 kata) dalam setiap paragraf.
 """
 
+    anti_plagiarism_block = """
+## ANTI-PLAGIARISME (WAJIB — SAMA PENTINGNYA DENGAN ANTI-AI)
+Teks ini juga akan diuji Turnitin. Pastikan:
+
+1. TIDAK BOLEH ada 3 kata berurutan yang SAMA PERSIS
+   dengan draf asli. Ini aturan mutlak tanpa pengecualian.
+
+2. WAJIB UBAH STRUKTUR KALIMAT, bukan hanya ganti kata:
+   - Kalimat aktif → pasif, atau pasif → aktif
+   - Gabungkan 2 kalimat pendek menjadi 1 kalimat kompleks
+   - Pecah 1 kalimat panjang (>25 kata) menjadi 2 kalimat
+   - Pindah posisi klausa: yang di awal → pindah ke akhir kalimat
+   - Ubah urutan informasi dalam paragraf
+
+3. HINDARI frasa akademik generik yang ada di jutaan dokumen:
+   ID: "penelitian ini bertujuan", "berdasarkan hasil",
+       "dapat disimpulkan bahwa", "perlu dilakukan",
+       "dalam rangka", "guna mencapai", "sebagai berikut"
+   EN: "this study aims to", "based on the results",
+       "it can be concluded", "further research is needed",
+       "in order to", "as follows", "it is important to note"
+   Ganti dengan konstruksi kalimat yang lebih spesifik.
+
+4. VARIASIKAN panjang kalimat secara ekstrem — ini membantu
+   bypass AI detector sekaligus membuat teks unik secara
+   struktural sehingga tidak cocok dengan sumber manapun.
+"""
+
     return f"""Kamu penulis manusia berpengalaman, bukan AI.
 Tugas: tulis ulang draf agar tidak terdeteksi detektor AI
 seperti GPTZero, sambil mempertahankan semua fakta asli.
@@ -155,14 +183,11 @@ seperti GPTZero, sambil mempertahankan semua fakta asli.
 
 {few_shot_text}
 
+{anti_plagiarism_block}
+
 {register_rules}
 
 ## ATURAN WAJIB (TIDAK BOLEH DILANGGAR)
-
-1. PERTAHANKAN SEMUA FAKTA: jangan ubah, hapus, 
-   atau tambah informasi faktual apapun.
-
-2. JANGAN TAMBAH KALIMAT BARU: setiap kalimat di output
    harus merupakan parafrasa dari kalimat di draf asli.
    DILARANG menambah opini, pertanyaan, atau informasi
    yang tidak ada di draf.
@@ -587,6 +612,37 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
 # Set API key at module level
 os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
 
+def _check_trigram_overlap(original: str, rewritten: str) -> float:
+    """
+    Hitung persentase trigram (3 kata berurutan) yang sama
+    antara original dan rewritten.
+    Target aman Turnitin: < 15%
+    Return: float 0.0 - 1.0
+    """
+    def get_trigrams(text: str) -> set:
+        words = re.sub(r'[^\w\s]', '', text.lower()).split()
+        if len(words) < 3:
+            return set()
+        return set(zip(words, words[1:], words[2:]))
+
+    orig_trigrams = get_trigrams(original)
+    new_trigrams  = get_trigrams(rewritten)
+
+    if not orig_trigrams:
+        return 0.0
+
+    overlap = len(orig_trigrams & new_trigrams)
+    return round(overlap / len(orig_trigrams), 3)
+
+
+def _needs_rewrite(overlap: float, threshold: float = 0.30) -> bool:
+    """
+    Return True jika trigram overlap terlalu tinggi
+    dan teks perlu Pass 2 rewrite.
+    Threshold default 30% — agresif tapi tidak berlebihan.
+    """
+    return overlap > threshold
+
 def _validate_paragraph_count(
     text: str,
     expected: int,
@@ -623,7 +679,11 @@ def _validate_paragraph_count(
 
     return text
 
-def _generate_changes_made(original: str, rewritten: str) -> list[str]:
+def _generate_changes_made(
+    original: str,
+    rewritten: str,
+    trigram_overlap: float = None,
+) -> list[str]:
     """
     Generate changes_made secara programatik dari diff
     antara original dan rewritten text.
@@ -683,6 +743,17 @@ def _generate_changes_made(original: str, rewritten: str) -> list[str]:
             "dan tidak terdeteksi AI."
         )
     
+    if trigram_overlap is not None:
+        safety = (
+            "aman" if trigram_overlap < 0.15
+            else "perlu perhatian" if trigram_overlap < 0.30
+            else "risiko tinggi"
+        )
+        changes.append(
+            f"Kesamaan struktural dengan draf asli: "
+            f"{trigram_overlap:.0%} ({safety} untuk Turnitin)."
+        )
+
     return changes
 
 
@@ -744,6 +815,42 @@ async def apply_style_stream(
     text = _apply_post_processing(text, style.language, style_mode)
     text = _validate_paragraph_count(text, paragraph_count, clean_draft)
 
+    # ── Trigram check — Pass 2 jika overlap terlalu tinggi ───
+    trigram_overlap = _check_trigram_overlap(clean_draft, text)
+
+    if _needs_rewrite(trigram_overlap, threshold=0.30):
+        # Overlap terlalu tinggi → minta Groq rewrite lagi
+        # dengan instruksi structural yang lebih agresif
+        pass2_msg = (
+            f"Teks berikut masih memiliki {trigram_overlap:.0%} kesamaan "
+            f"struktural dengan draf asli. "
+            f"Tulis ulang SELURUH teks dengan mengubah struktur setiap "
+            f"kalimat secara fundamental — ubah urutan subjek-predikat-objek, "
+            f"gabungkan atau pecah kalimat, ubah aktif ke pasif atau sebaliknya. "
+            f"TIDAK BOLEH ada 3 kata berurutan yang sama dengan versi ini.\n\n"
+            f"{text}"
+        )
+        try:
+            result2 = await asyncio.wait_for(
+                agent.run(
+                    pass2_msg,
+                    model_settings={"temperature": 1.5},
+                ),
+                timeout=60.0
+            )
+            text2 = str(result2.output).strip() if result2.output else ""
+            if text2:
+                text2 = _apply_post_processing(text2, style.language, style_mode)
+                text2 = _programmatic_sentence_humanize(text2, style.language, style_mode)
+                text2 = _validate_paragraph_count(text2, paragraph_count, clean_draft)
+                # Hanya pakai Pass 2 jika overlap-nya lebih kecil
+                new_overlap = _check_trigram_overlap(clean_draft, text2)
+                if new_overlap < trigram_overlap:
+                    text = text2
+                    trigram_overlap = new_overlap
+        except Exception:
+            pass  # Tetap pakai Pass 1 jika Pass 2 gagal
+
     # Simulated streaming
     chunk_size = 10
     for i in range(0, len(text), chunk_size):
@@ -752,7 +859,7 @@ async def apply_style_stream(
         await asyncio.sleep(0.01)
 
     # Changes programmatic — tidak dari LLM
-    changes = _generate_changes_made(clean_draft, text)
+    changes = _generate_changes_made(clean_draft, text, trigram_overlap)
     yield f"event: metrics\ndata: {json.dumps({'changes_made': changes})}\n\n"
 
 
@@ -808,5 +915,38 @@ async def apply_style(
     text = _apply_post_processing(text, style.language, style_mode)
     text = _validate_paragraph_count(text, paragraph_count, clean_draft)
 
-    changes = _generate_changes_made(clean_draft, text)
+    # ── Trigram check — Pass 2 jika overlap terlalu tinggi ───
+    trigram_overlap = _check_trigram_overlap(clean_draft, text)
+
+    if _needs_rewrite(trigram_overlap, threshold=0.30):
+        pass2_msg = (
+            f"Teks berikut masih memiliki {trigram_overlap:.0%} kesamaan "
+            f"struktural dengan draf asli. "
+            f"Tulis ulang SELURUH teks dengan mengubah struktur setiap "
+            f"kalimat secara fundamental — ubah urutan subjek-predikat-objek, "
+            f"gabungkan atau pecah kalimat, ubah aktif ke pasif atau sebaliknya. "
+            f"TIDAK BOLEH ada 3 kata berurutan yang sama dengan versi ini.\n\n"
+            f"{text}"
+        )
+        try:
+            result2 = await asyncio.wait_for(
+                agent.run(
+                    pass2_msg,
+                    model_settings={"temperature": 1.5},
+                ),
+                timeout=60.0
+            )
+            text2 = str(result2.output).strip() if result2.output else ""
+            if text2:
+                text2 = _apply_post_processing(text2, style.language, style_mode)
+                text2 = _programmatic_sentence_humanize(text2, style.language, style_mode)
+                text2 = _validate_paragraph_count(text2, paragraph_count, clean_draft)
+                new_overlap = _check_trigram_overlap(clean_draft, text2)
+                if new_overlap < trigram_overlap:
+                    text = text2
+                    trigram_overlap = new_overlap
+        except Exception:
+            pass
+
+    changes = _generate_changes_made(clean_draft, text, trigram_overlap)
     return ProcessedText(final_text=text, changes_made=changes)

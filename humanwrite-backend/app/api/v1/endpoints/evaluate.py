@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
-from app.core.evaluator import SQLiteEvaluator, EvaluationRecord, run_llm_judge
+from app.core.evaluator import SQLiteEvaluator, EvaluationRecord, run_llm_judge, compute_trigram_overlap
 from pathlib import Path
 
 router = APIRouter()
@@ -23,6 +23,8 @@ class EvaluationRequest(BaseModel):
     gptzero_before: Optional[float] = None
     gptzero_after: Optional[float] = None
     metadata: Optional[Dict[str, Any]] = None
+    trigram_overlap: Optional[float] = None
+    semantic_similarity: Optional[float] = None
 
 class GPTZeroUpdateRequest(BaseModel):
     gptzero_before: Optional[float] = None
@@ -55,7 +57,8 @@ async def run_evaluation(request: EvaluationRequest):
             judge_feedback=request.judge_feedback,
             gptzero_before=request.gptzero_before,
             gptzero_after=request.gptzero_after,
-            metadata=request.metadata
+            metadata=request.metadata,
+            trigram_overlap=compute_trigram_overlap(request.original_text, request.output_text)
         )
         record_id = evaluator.log_evaluation(record)
         return {"status": "success", "record_id": record_id}

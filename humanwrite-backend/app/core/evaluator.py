@@ -28,6 +28,10 @@ class EvaluationRecord(BaseModel):
     gptzero_before: Optional[float] = None
     gptzero_after: Optional[float] = None
     
+    # Anti-plagiarism
+    trigram_overlap: Optional[float] = None
+    semantic_similarity: Optional[float] = None
+    
     # Additional context
     metadata: Optional[Dict[str, Any]] = None
 
@@ -62,7 +66,9 @@ class SQLiteEvaluator:
                 judge_feedback TEXT,
                 metadata TEXT,
                 gptzero_before REAL,
-                gptzero_after REAL
+                gptzero_after REAL,
+                trigram_overlap REAL,
+                semantic_similarity REAL
             )
         ''')
         
@@ -72,6 +78,13 @@ class SQLiteEvaluator:
             cursor.execute("ALTER TABLE evaluations ADD COLUMN gptzero_after REAL")
         except sqlite3.OperationalError:
             pass # Columns already exist
+
+        try:
+            cursor.execute("ALTER TABLE evaluations ADD COLUMN trigram_overlap REAL")
+            cursor.execute("ALTER TABLE evaluations ADD COLUMN semantic_similarity REAL")
+        except sqlite3.OperationalError:
+            pass
+
             
         conn.commit()
         conn.close()
@@ -88,8 +101,8 @@ class SQLiteEvaluator:
                 timestamp, style_mode, language, original_text, output_text,
                 burstiness, content_preservation, ai_word_reduction,
                 paragraph_integrity, eyd_score, judge_score, judge_feedback, metadata,
-                gptzero_before, gptzero_after
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                gptzero_before, gptzero_after, trigram_overlap, semantic_similarity
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             now,
             record.style_mode,
@@ -105,7 +118,9 @@ class SQLiteEvaluator:
             record.judge_feedback,
             metadata_str,
             record.gptzero_before,
-            record.gptzero_after
+            record.gptzero_after,
+            record.trigram_overlap,
+            record.semantic_similarity
         ))
         
         last_id = cursor.lastrowid
@@ -150,7 +165,9 @@ class SQLiteEvaluator:
                 judge_feedback=row['judge_feedback'],
                 metadata=json.loads(row['metadata']) if row['metadata'] else {},
                 gptzero_before=row.get('gptzero_before'),
-                gptzero_after=row.get('gptzero_after')
+                gptzero_after=row.get('gptzero_after'),
+                trigram_overlap=row.get('trigram_overlap'),
+                semantic_similarity=row.get('semantic_similarity')
             )
             results.append(record)
             
@@ -194,6 +211,23 @@ class SQLiteEvaluator:
         return success
 
 import re
+
+def compute_trigram_overlap(original: str, rewritten: str) -> float:
+    """
+    Versi standalone trigram overlap untuk dipakai
+    di evaluate endpoint tanpa import writing_engine.
+    """
+    def get_trigrams(text: str) -> set:
+        words = re.sub(r'[^\w\s]', '', text.lower()).split()
+        if len(words) < 3:
+            return set()
+        return set(zip(words, words[1:], words[2:]))
+
+    orig = get_trigrams(original)
+    new  = get_trigrams(rewritten)
+    if not orig:
+        return 0.0
+    return round(len(orig & new) / len(orig), 3)
 
 JUDGE_PROMPT_TEMPLATE = """
 Kamu adalah evaluator ahli untuk sistem humanisasi teks AI.

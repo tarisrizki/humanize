@@ -485,6 +485,46 @@ with tab2:
                     st.warning(f"⚠️ Paling AI: *{breakdown['worst_sentence']}*")
                 except Exception as e:
                     st.error(f"Gagal menjalankan LLM Judge: {e}")
+        # Turnitin Safety
+        st.markdown("---")
+        st.markdown("#### 🛡️ Turnitin Safety")
+
+        if st.session_state.get("last_result") and st.session_state.get("last_draft"):
+            # Cari info overlap dari changes_made
+            changes = st.session_state.get("last_metrics", {}).get("changes_made", [])
+            overlap_info = next(
+                (c for c in changes if "Kesamaan struktural" in c), None
+            )
+
+            if overlap_info:
+                # Parse persentase dari string
+                import re
+                pct_match = re.search(r'(\d+)%', overlap_info)
+                if pct_match:
+                    overlap_pct = int(pct_match.group(1))
+
+                    if overlap_pct < 15:
+                        st.success(f"✅ **{overlap_pct}% kesamaan struktural** — Aman untuk Turnitin")
+                    elif overlap_pct < 30:
+                        st.warning(f"⚠️ **{overlap_pct}% kesamaan struktural** — Perlu perhatian")
+                    else:
+                        st.error(f"🔴 **{overlap_pct}% kesamaan struktural** — Risiko tinggi plagiarisme")
+
+                    # Progress bar visual
+                    st.progress(
+                        min(overlap_pct / 100, 1.0),
+                        text=f"Turnitin overlap: {overlap_pct}%"
+                    )
+
+                    st.caption(
+                        "🟢 < 15%: Aman  |  "
+                        "🟡 15-30%: Perlu perhatian  |  "
+                        "🔴 > 30%: Risiko tinggi"
+                    )
+            else:
+                st.info("Humanize teks terlebih dahulu untuk melihat Turnitin Safety Score.")
+        else:
+            st.info("Humanize teks terlebih dahulu untuk melihat Turnitin Safety Score.")
                     
         # GPTZero Form
         st.markdown("---")
