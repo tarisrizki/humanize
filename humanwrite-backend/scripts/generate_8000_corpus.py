@@ -16,12 +16,17 @@ def clean_text(text):
     text = " ".join(text.split())
     return text
 
-def fetch_dataset(hf_path, hf_name, split, text_field, limit=1000, lang="id", trust_remote_code=True, is_translation=False, trans_lang="en"):
-    print(f"  Downloading {limit} from {hf_path} ({lang})...")
+def fetch_dataset(hf_path, hf_name, split, text_field, limit=1000, skip=0, lang="id", trust_remote_code=True, is_translation=False, trans_lang="en"):
+    print(f"  Downloading {limit} from {hf_path} ({lang}) skipping {skip}...")
     results = []
+    skipped = 0
     try:
         ds = load_dataset(hf_path, hf_name, split=split, streaming=True, trust_remote_code=trust_remote_code)
         for item in ds:
+            if skipped < skip:
+                skipped += 1
+                continue
+                
             if is_translation:
                 raw = item.get("translation", {}).get(trans_lang, "")
             else:
@@ -67,8 +72,8 @@ def main():
 
     # 3. Populer
     create_csv_for_mode("populer", [
-        {"hf_path": "SetFit/yelp_review_full", "hf_name": "default", "split": "train", "text_field": "text", "lang": "en"},
-        {"hf_path": "indonlu", "hf_name": "smsa", "split": "train", "text_field": "text", "lang": "id"}
+        {"hf_path": "abisee/cnn_dailymail", "hf_name": "3.0.0", "split": "train", "text_field": "article", "lang": "en"},
+        {"hf_path": "indonesian-nlp/wikipedia-id", "hf_name": "default", "split": "train", "text_field": "text", "lang": "id", "skip": 1000, "trust_remote_code": False}
     ])
 
     # 4. Kreatif

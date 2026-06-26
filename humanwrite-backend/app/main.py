@@ -97,6 +97,7 @@ async def health_check():
 
 # ── Include API routers ──────────────────────────────────────────────────────
 
-from app.api.v1.endpoints import process
+from app.api.v1.endpoints import process, evaluate
 
 app.include_router(process.router, prefix="/api/v1", tags=["process"])
+app.include_router(evaluate.router, prefix="/api/v1/evaluate", tags=["evaluate"])
