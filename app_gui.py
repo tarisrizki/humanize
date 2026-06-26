@@ -566,7 +566,7 @@ with tab3:
         try:
             resp = requests.get(f"{BACKEND_URL}/api/v1/evaluate/history")
             if resp.status_code == 200:
-                history_data = resp.json()
+                history_data = resp.json().get("data", [])
                 if history_data:
                     # Clean up data for dataframe
                     df = pd.DataFrame(history_data)

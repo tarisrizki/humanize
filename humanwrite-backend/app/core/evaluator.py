@@ -305,26 +305,30 @@ def run_llm_judge(
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             temperature=0.0,
             messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
             timeout=60.0,
         )
 
         raw = response.choices[0].message.content.strip()
 
-        # Bersihkan markdown jika ada
-        raw = re.sub(r"```json|```", "", raw).strip()
+        # Ekstrak blok JSON dengan aman
+        json_match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if json_match:
+            raw = json_match.group(0)
+            
         result = json.loads(raw)
 
         return {
             "success": True,
-            "naturalness":         result["naturalness"],
-            "register_compliance": result["register_compliance"],
-            "content_fidelity":    result["content_fidelity"],
-            "eyd_grammar":         result["eyd_grammar"],
-            "anti_detection":      result["anti_detection"],
-            "overall_score":       result["overall_score"],
+            "naturalness":         result.get("naturalness", {"score": 0, "reason": "N/A"}),
+            "register_compliance": result.get("register_compliance", {"score": 0, "reason": "N/A"}),
+            "content_fidelity":    result.get("content_fidelity", {"score": 0, "reason": "N/A"}),
+            "eyd_grammar":         result.get("eyd_grammar", {"score": 0, "reason": "N/A"}),
+            "anti_detection":      result.get("anti_detection", {"score": 0, "reason": "N/A"}),
+            "overall_score":       result.get("overall_score", 0),
             "critical_issues":     result.get("critical_issues", []),
             "highlight":           result.get("highlight", ""),
             "worst_sentence":      result.get("worst_sentence", ""),
