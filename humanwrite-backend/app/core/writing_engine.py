@@ -593,6 +593,36 @@ def _needs_rewrite(overlap: float, threshold: float = 0.30) -> bool:
     """
     return overlap > threshold
 
+def _validate_output_quality(
+    text: str,
+    original: str,
+    min_overlap: float = 0.15,
+) -> bool:
+    """
+    Validasi apakah output Groq masih layak dipakai.
+    Return False jika output terlalu menyimpang dari input.
+    """
+    if not text or len(text.split()) < 10:
+        return False
+
+    # Rasio panjang output vs input (harus 0.5x - 2.5x)
+    orig_len = len(original.split())
+    new_len  = len(text.split())
+    ratio = new_len / max(orig_len, 1)
+    if ratio < 0.5 or ratio > 2.5:
+        return False
+
+    # Minimal 15% kata penting (≥4 huruf) harus terjaga
+    orig_words = set(re.findall(r'\b\w{4,}\b', original.lower()))
+    new_words  = set(re.findall(r'\b\w{4,}\b', text.lower()))
+    if not orig_words:
+        return True
+    overlap = len(orig_words & new_words) / len(orig_words)
+    if overlap < min_overlap:
+        return False
+
+    return True
+
 def _validate_paragraph_count(
     text: str,
     expected: int,
@@ -746,13 +776,32 @@ async def apply_style_stream(
         result = await asyncio.wait_for(
             agent.run(
                 user_msg,
-                model_settings={"temperature": 1.5},
+                model_settings={"temperature": 1.0},
             ),
             timeout=60.0
         )
         full_text = str(result.output).strip() if result.output else ""
     except Exception as e:
         full_text = ""
+
+    # Validasi output Groq sebelum post-processing
+    if not _validate_output_quality(full_text, clean_draft):
+        # Output tidak layak — retry dengan temperature lebih rendah
+        try:
+            result_retry = await asyncio.wait_for(
+                agent.run(
+                    user_msg,
+                    model_settings={"temperature": 0.8},
+                ),
+                timeout=60.0
+            )
+            retry_text = str(result_retry.output).strip() if result_retry.output else ""
+            if _validate_output_quality(retry_text, clean_draft):
+                full_text = retry_text
+            else:
+                pass
+        except Exception:
+            pass
 
     if not full_text:
         return
@@ -783,7 +832,7 @@ async def apply_style_stream(
             result2 = await asyncio.wait_for(
                 agent.run(
                     pass2_msg,
-                    model_settings={"temperature": 1.5},
+                    model_settings={"temperature": 1.0},
                 ),
                 timeout=60.0
             )
@@ -850,13 +899,32 @@ async def apply_style(
         result = await asyncio.wait_for(
             agent.run(
                 user_msg,
-                model_settings={"temperature": 1.5},
+                model_settings={"temperature": 1.0},
             ),
             timeout=60.0
         )
         full_text = str(result.output).strip() if result.output else ""
     except Exception:
         full_text = draft  # fallback ke draf asli
+
+    # Validasi output Groq sebelum post-processing
+    if not _validate_output_quality(full_text, clean_draft):
+        # Output tidak layak — retry dengan temperature lebih rendah
+        try:
+            result_retry = await asyncio.wait_for(
+                agent.run(
+                    user_msg,
+                    model_settings={"temperature": 0.8},
+                ),
+                timeout=60.0
+            )
+            retry_text = str(result_retry.output).strip() if result_retry.output else ""
+            if _validate_output_quality(retry_text, clean_draft):
+                full_text = retry_text
+            else:
+                pass
+        except Exception:
+            pass
 
     text = _apply_post_processing(full_text, style.language, style_mode)
     text = _inject_short_sentences(text, style.language, style_mode)
@@ -881,7 +949,7 @@ async def apply_style(
             result2 = await asyncio.wait_for(
                 agent.run(
                     pass2_msg,
-                    model_settings={"temperature": 1.5},
+                    model_settings={"temperature": 1.0},
                 ),
                 timeout=60.0
             )
