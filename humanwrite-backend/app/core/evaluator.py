@@ -29,6 +29,9 @@ class EvaluationRecord(BaseModel):
     # GPTZero manual input
     gptzero_before: Optional[float] = None
     gptzero_after: Optional[float] = None
+    result_ai: Optional[float] = None
+    result_mixed: Optional[float] = None
+    result_human: Optional[float] = None
     
     # Anti-plagiarism
     trigram_overlap: Optional[float] = None
@@ -69,6 +72,9 @@ class SQLiteEvaluator:
                 metadata TEXT,
                 gptzero_before REAL,
                 gptzero_after REAL,
+                result_ai REAL,
+                result_mixed REAL,
+                result_human REAL,
                 trigram_overlap REAL,
                 semantic_similarity REAL
             )
@@ -80,6 +86,13 @@ class SQLiteEvaluator:
             cursor.execute("ALTER TABLE evaluations ADD COLUMN gptzero_after REAL")
         except sqlite3.OperationalError:
             pass # Columns already exist
+
+        try:
+            cursor.execute("ALTER TABLE evaluations ADD COLUMN result_ai REAL")
+            cursor.execute("ALTER TABLE evaluations ADD COLUMN result_mixed REAL")
+            cursor.execute("ALTER TABLE evaluations ADD COLUMN result_human REAL")
+        except sqlite3.OperationalError:
+            pass
 
         try:
             cursor.execute("ALTER TABLE evaluations ADD COLUMN trigram_overlap REAL")
@@ -103,8 +116,8 @@ class SQLiteEvaluator:
                 timestamp, style_mode, language, original_text, output_text,
                 burstiness, content_preservation, ai_word_reduction,
                 paragraph_integrity, eyd_score, judge_score, judge_feedback, metadata,
-                gptzero_before, gptzero_after, trigram_overlap, semantic_similarity
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                gptzero_before, gptzero_after, result_ai, result_mixed, result_human, trigram_overlap, semantic_similarity
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             now,
             record.style_mode,
@@ -120,7 +133,7 @@ class SQLiteEvaluator:
             record.judge_feedback,
             metadata_str,
             record.gptzero_before,
-            record.gptzero_after,
+            record.gptzero_after, record.result_ai, record.result_mixed, record.result_human, result_ai, result_mixed, result_human,
             record.trigram_overlap,
             record.semantic_similarity
         ))
@@ -168,6 +181,9 @@ class SQLiteEvaluator:
                 metadata=json.loads(row['metadata']) if row['metadata'] else {},
                 gptzero_before=row['gptzero_before'],
                 gptzero_after=row['gptzero_after'],
+                result_ai=row['result_ai'],
+                result_mixed=row['result_mixed'],
+                result_human=row['result_human'],
                 trigram_overlap=row['trigram_overlap'],
                 semantic_similarity=row['semantic_similarity']
             )
@@ -175,7 +191,7 @@ class SQLiteEvaluator:
             
         return results
 
-    def update_gptzero_score(self, record_id: int, gptzero_before: float = None, gptzero_after: float = None) -> bool:
+    def update_gptzero_score(self, record_id: int, gptzero_before: float = None, result_ai: float = None, result_mixed: float = None, result_human: float = None) -> bool:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -184,9 +200,15 @@ class SQLiteEvaluator:
         if gptzero_before is not None:
             updates.append("gptzero_before = ?")
             params.append(gptzero_before)
-        if gptzero_after is not None:
-            updates.append("gptzero_after = ?")
-            params.append(gptzero_after)
+        if result_ai is not None:
+            updates.append("result_ai = ?")
+            params.append(result_ai)
+        if result_mixed is not None:
+            updates.append("result_mixed = ?")
+            params.append(result_mixed)
+        if result_human is not None:
+            updates.append("result_human = ?")
+            params.append(result_human)
             
         if not updates:
             conn.close()
