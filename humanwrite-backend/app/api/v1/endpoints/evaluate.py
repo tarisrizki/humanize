@@ -21,19 +21,22 @@ class EvaluationRequest(BaseModel):
     eyd_score: Optional[float] = None
     judge_score: Optional[float] = None
     judge_feedback: Optional[str] = None
-    gptzero_before: Optional[float] = None
-    gptzero_ai: Optional[int] = None
-    gptzero_mixed: Optional[int] = None
-    gptzero_human: Optional[int] = None
     metadata: Optional[Dict[str, Any]] = None
     trigram_overlap: Optional[float] = None
     semantic_similarity: Optional[float] = None
 
-class GPTZeroUpdateRequest(BaseModel):
-    gptzero_before: Optional[float] = None
-    gptzero_ai: Optional[int] = None
-    gptzero_mixed: Optional[int] = None
-    gptzero_human: Optional[int] = None
+class GPTZeroUpdate(BaseModel):
+    record_id: int
+
+    # Standard (Output A)
+    gptzero_std_ai: Optional[int] = None
+    gptzero_std_mixed: Optional[int] = None
+    gptzero_std_human: Optional[int] = None
+
+    # Enhanced (Output B)
+    gptzero_enh_ai: Optional[int] = None
+    gptzero_enh_mixed: Optional[int] = None
+    gptzero_enh_human: Optional[int] = None
 
 class JudgeRequest(BaseModel):
     record_id: int          # FK ke evaluation result
@@ -60,10 +63,6 @@ async def run_evaluation(request: EvaluationRequest):
             eyd_score=request.eyd_score,
             judge_score=request.judge_score,
             judge_feedback=request.judge_feedback,
-            gptzero_before=request.gptzero_before,
-            gptzero_ai=request.gptzero_ai,
-            gptzero_mixed=request.gptzero_mixed,
-            gptzero_human=request.gptzero_human,
             metadata=request.metadata,
             trigram_overlap=check_trigram_overlap(request.original_text, request.output_text)
         )
@@ -72,26 +71,40 @@ async def run_evaluation(request: EvaluationRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.patch("/{record_id}/gptzero", summary="Update GPTZero score manually")
-async def update_gptzero(record_id: int, request: GPTZeroUpdateRequest):
+@router.patch("/gptzero", summary="Update GPTZero score manually")
+async def update_gptzero(request: GPTZeroUpdate):
     """
     Updates the GPTZero score for a specific evaluation record.
     """
     try:
         success = evaluator.update_gptzero_score(
-            record_id, 
-            gptzero_before=request.gptzero_before, 
-            gptzero_ai=request.gptzero_ai,
-            gptzero_mixed=request.gptzero_mixed,
-            gptzero_human=request.gptzero_human
+            request.record_id, 
+            gptzero_std_ai=request.gptzero_std_ai,
+            gptzero_std_mixed=request.gptzero_std_mixed,
+            gptzero_std_human=request.gptzero_std_human,
+            gptzero_enh_ai=request.gptzero_enh_ai,
+            gptzero_enh_mixed=request.gptzero_enh_mixed,
+            gptzero_enh_human=request.gptzero_enh_human
         )
         if not success:
             raise HTTPException(status_code=404, detail="Record not found or no updates provided")
         return {"status": "success", "message": "GPTZero score updated"}
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/compare/{record_id}")
+def get_comparison(record_id: int):
+    """Ambil data A vs B untuk ditampilkan di History."""
+    import sqlite3
+    conn = sqlite3.connect(evaluator.db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM evaluations WHERE id = ?", (record_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(404, "Record not found")
+    return dict(row)
 
 @router.get("/history", summary="Get evaluation history")
 async def get_history(limit: int = 100):
@@ -112,7 +125,7 @@ async def run_judge(request: JudgeRequest):
     """
     import json
     
-    result = run_llm_judge(
+    result = await run_llm_judge(
         original_text=request.original_text,
         humanized_text=request.humanized_text,
         style_mode=request.style_mode,

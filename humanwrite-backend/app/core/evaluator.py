@@ -26,11 +26,21 @@ class EvaluationRecord(BaseModel):
     judge_score: Optional[float] = None
     judge_feedback: Optional[str] = None
     
-    # GPTZero manual input
-    gptzero_before: Optional[float] = None
-    gptzero_ai: Optional[int] = None
-    gptzero_mixed: Optional[int] = None
-    gptzero_human: Optional[int] = None
+    # Enhanced output
+    enhanced_text: Optional[str] = None
+    enhanced_judge_score: Optional[float] = None
+    enhanced_trigram: Optional[float] = None
+    judge_score_standard: Optional[float] = None
+
+    # GPTZero manual input (Standard)
+    gptzero_std_ai: Optional[int] = None
+    gptzero_std_mixed: Optional[int] = None
+    gptzero_std_human: Optional[int] = None
+    
+    # GPTZero manual input (Enhanced)
+    gptzero_enh_ai: Optional[int] = None
+    gptzero_enh_mixed: Optional[int] = None
+    gptzero_enh_human: Optional[int] = None
     
     # Anti-plagiarism
     trigram_overlap: Optional[float] = None
@@ -69,34 +79,39 @@ class SQLiteEvaluator:
                 judge_score REAL,
                 judge_feedback TEXT,
                 metadata TEXT,
-                gptzero_before REAL,
-                gptzero_ai INTEGER,
-                gptzero_mixed INTEGER,
-                gptzero_human INTEGER,
                 trigram_overlap REAL,
-                semantic_similarity REAL
+                semantic_similarity REAL,
+                enhanced_text TEXT,
+                enhanced_judge_score REAL,
+                enhanced_trigram REAL,
+                judge_score_standard REAL,
+                gptzero_std_ai INTEGER,
+                gptzero_std_mixed INTEGER,
+                gptzero_std_human INTEGER,
+                gptzero_enh_ai INTEGER,
+                gptzero_enh_mixed INTEGER,
+                gptzero_enh_human INTEGER
             )
         ''')
         
         # Safe migration for existing DB
-        try:
-            cursor.execute("ALTER TABLE evaluations ADD COLUMN gptzero_before REAL")
-            cursor.execute("ALTER TABLE evaluations ADD COLUMN gptzero_after REAL")
-        except sqlite3.OperationalError:
-            pass # Columns already exist
+        for col in [
+            "enhanced_text TEXT",
+            "enhanced_judge_score REAL",
+            "enhanced_trigram REAL",
+            "judge_score_standard REAL",
+            "gptzero_std_ai INTEGER",
+            "gptzero_std_mixed INTEGER",
+            "gptzero_std_human INTEGER",
+            "gptzero_enh_ai INTEGER",
+            "gptzero_enh_mixed INTEGER",
+            "gptzero_enh_human INTEGER",
+        ]:
+            try:
+                cursor.execute(f"ALTER TABLE evaluations ADD COLUMN {col}")
+            except sqlite3.OperationalError:
+                pass
 
-        try:
-            cursor.execute("ALTER TABLE evaluations ADD COLUMN gptzero_ai INTEGER")
-            cursor.execute("ALTER TABLE evaluations ADD COLUMN gptzero_mixed INTEGER")
-            cursor.execute("ALTER TABLE evaluations ADD COLUMN gptzero_human INTEGER")
-        except sqlite3.OperationalError:
-            pass
-
-        try:
-            cursor.execute("ALTER TABLE evaluations ADD COLUMN trigram_overlap REAL")
-            cursor.execute("ALTER TABLE evaluations ADD COLUMN semantic_similarity REAL")
-        except sqlite3.OperationalError:
-            pass
 
             
         conn.commit()
@@ -114,8 +129,11 @@ class SQLiteEvaluator:
                 timestamp, style_mode, language, original_text, output_text,
                 burstiness, content_preservation, ai_word_reduction,
                 paragraph_integrity, eyd_score, judge_score, judge_feedback, metadata,
-                gptzero_before, gptzero_ai, gptzero_mixed, gptzero_human, trigram_overlap, semantic_similarity
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                trigram_overlap, semantic_similarity,
+                enhanced_text, enhanced_judge_score, enhanced_trigram, judge_score_standard,
+                gptzero_std_ai, gptzero_std_mixed, gptzero_std_human,
+                gptzero_enh_ai, gptzero_enh_mixed, gptzero_enh_human
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             now,
             record.style_mode,
@@ -130,12 +148,18 @@ class SQLiteEvaluator:
             record.judge_score,
             record.judge_feedback,
             metadata_str,
-            record.gptzero_before,
-            record.gptzero_ai,
-            record.gptzero_mixed,
-            record.gptzero_human,
             record.trigram_overlap,
-            record.semantic_similarity
+            record.semantic_similarity,
+            record.enhanced_text,
+            record.enhanced_judge_score,
+            record.enhanced_trigram,
+            record.judge_score_standard,
+            record.gptzero_std_ai,
+            record.gptzero_std_mixed,
+            record.gptzero_std_human,
+            record.gptzero_enh_ai,
+            record.gptzero_enh_mixed,
+            record.gptzero_enh_human
         ))
         
         last_id = cursor.lastrowid
@@ -179,35 +203,49 @@ class SQLiteEvaluator:
                 judge_score=row['judge_score'],
                 judge_feedback=row['judge_feedback'],
                 metadata=json.loads(row['metadata']) if row['metadata'] else {},
-                gptzero_before=row['gptzero_before'],
-                gptzero_ai=row['gptzero_ai'],
-                gptzero_mixed=row['gptzero_mixed'],
-                gptzero_human=row['gptzero_human'],
-                trigram_overlap=row['trigram_overlap'],
-                semantic_similarity=row['semantic_similarity']
+                trigram_overlap=row['trigram_overlap'] if 'trigram_overlap' in row.keys() else None,
+                semantic_similarity=row['semantic_similarity'] if 'semantic_similarity' in row.keys() else None,
+                enhanced_text=row['enhanced_text'] if 'enhanced_text' in row.keys() else None,
+                enhanced_judge_score=row['enhanced_judge_score'] if 'enhanced_judge_score' in row.keys() else None,
+                enhanced_trigram=row['enhanced_trigram'] if 'enhanced_trigram' in row.keys() else None,
+                judge_score_standard=row['judge_score_standard'] if 'judge_score_standard' in row.keys() else None,
+                gptzero_std_ai=row['gptzero_std_ai'] if 'gptzero_std_ai' in row.keys() else None,
+                gptzero_std_mixed=row['gptzero_std_mixed'] if 'gptzero_std_mixed' in row.keys() else None,
+                gptzero_std_human=row['gptzero_std_human'] if 'gptzero_std_human' in row.keys() else None,
+                gptzero_enh_ai=row['gptzero_enh_ai'] if 'gptzero_enh_ai' in row.keys() else None,
+                gptzero_enh_mixed=row['gptzero_enh_mixed'] if 'gptzero_enh_mixed' in row.keys() else None,
+                gptzero_enh_human=row['gptzero_enh_human'] if 'gptzero_enh_human' in row.keys() else None
             )
             results.append(record)
             
         return results
 
-    def update_gptzero_score(self, record_id: int, gptzero_before: float = None, gptzero_ai: int = None, gptzero_mixed: int = None, gptzero_human: int = None) -> bool:
+    def update_gptzero_score(self, record_id: int, 
+                             gptzero_std_ai: int = None, gptzero_std_mixed: int = None, gptzero_std_human: int = None,
+                             gptzero_enh_ai: int = None, gptzero_enh_mixed: int = None, gptzero_enh_human: int = None) -> bool:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
         updates = []
         params = []
-        if gptzero_before is not None:
-            updates.append("gptzero_before = ?")
-            params.append(gptzero_before)
-        if gptzero_ai is not None:
-            updates.append("gptzero_ai = ?")
-            params.append(gptzero_ai)
-        if gptzero_mixed is not None:
-            updates.append("gptzero_mixed = ?")
-            params.append(gptzero_mixed)
-        if gptzero_human is not None:
-            updates.append("gptzero_human = ?")
-            params.append(gptzero_human)
+        if gptzero_std_ai is not None:
+            updates.append("gptzero_std_ai = ?")
+            params.append(gptzero_std_ai)
+        if gptzero_std_mixed is not None:
+            updates.append("gptzero_std_mixed = ?")
+            params.append(gptzero_std_mixed)
+        if gptzero_std_human is not None:
+            updates.append("gptzero_std_human = ?")
+            params.append(gptzero_std_human)
+        if gptzero_enh_ai is not None:
+            updates.append("gptzero_enh_ai = ?")
+            params.append(gptzero_enh_ai)
+        if gptzero_enh_mixed is not None:
+            updates.append("gptzero_enh_mixed = ?")
+            params.append(gptzero_enh_mixed)
+        if gptzero_enh_human is not None:
+            updates.append("gptzero_enh_human = ?")
+            params.append(gptzero_enh_human)
             
         if not updates:
             conn.close()
@@ -221,6 +259,19 @@ class SQLiteEvaluator:
         conn.commit()
         conn.close()
         
+        return success
+
+    def update_enhanced_result(self, record_id: int, enhanced_text: str, enhanced_judge_score: float, enhanced_trigram: float, judge_score_standard: float) -> bool:
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE evaluations 
+            SET enhanced_text = ?, enhanced_judge_score = ?, enhanced_trigram = ?, judge_score_standard = ? 
+            WHERE id = ?
+        ''', (enhanced_text, enhanced_judge_score, enhanced_trigram, judge_score_standard, record_id))
+        success = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
         return success
 
     def update_judge_result(self, record_id: int, judge_score: float, judge_feedback: str) -> bool:
@@ -302,20 +353,20 @@ overall_score = (naturalness×25 + register_compliance×20 +
 ═══════════════════════════════════════════════
 """
 
-def run_llm_judge(
+async def run_llm_judge(
     original_text: str,
     humanized_text: str,
     style_mode: str,
     language: str,
 ) -> dict:
     """
-    Jalankan LLM as a Judge via Groq API.
+    Jalankan LLM as a Judge via Groq API secara asinkron.
     Return dict dengan skor dan feedback.
     """
     import groq
     from app.config import settings
     
-    client = groq.Groq(api_key=settings.GROQ_API_KEY)
+    client = groq.AsyncGroq(api_key=settings.GROQ_API_KEY)
 
     prompt = JUDGE_PROMPT_TEMPLATE.format(
         original_text=original_text,
@@ -325,7 +376,7 @@ def run_llm_judge(
     )
 
     try:
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model="llama-3.1-8b-instant",
             temperature=0.0,
             messages=[{"role": "user", "content": prompt}],
