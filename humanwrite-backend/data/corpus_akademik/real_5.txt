@@ -1,0 +1,1 @@
+melibatkan cara mesin menyimpan informasi formal tentang dunia. Yang direpresentasikan meliputi objek, properti, kategori, hubungan antar-objek, situasi, peristiwa, dan waktu. Ontologi formal digunakan untuk menyusun pengetahuan ini agar dapat dibaca oleh mesin secara universal.

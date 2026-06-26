@@ -1,0 +1,1 @@
+Algoritme pembelajaran mesin dapat mewarisi bias yang terkandung dalam data pelatihan historis mereka. Hal ini dapat memicu keputusan yang diskriminatif dalam sistem hukum, perekrutan kerja, dan layanan publik.
