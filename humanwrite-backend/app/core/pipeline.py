@@ -13,8 +13,8 @@ from app.core.prompts import _build_system_prompt
 from app.core.text_utils import (
     _count_paragraphs, _clean_input_draft, _strip_meta_commentary, 
     check_trigram_overlap, _validate_paragraph_count, _enforce_min_sentences,
-    _generate_changes_made, _validate_output_quality, _score_human_likelihood,
-    _programmatic_sentence_humanize, _inject_short_sentences, _apply_post_processing
+    _generate_changes_made, _programmatic_sentence_humanize, 
+    _inject_short_sentences, _apply_post_processing
 )
 
 async def apply_style_stream(
@@ -172,7 +172,7 @@ async def apply_style(
         async for chunk in stream_gen:
             for line in chunk.split('\n'):
                 if line.startswith("event: "):
-                    event_type = line[7:].strip()
+                    pass
                 elif line.startswith("data: "):
                     data_str = line[6:].strip()
                     if data_str:

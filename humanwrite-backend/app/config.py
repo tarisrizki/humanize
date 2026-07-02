@@ -34,16 +34,8 @@ class Settings(BaseSettings):
         return Path(self.DATA_DIR)
 
     @property
-    def corpus_path(self) -> Path:
-        return self.data_path / "corpus"
-
-    @property
     def profiles_path(self) -> Path:
         return self.data_path / "profiles"
-
-    @property
-    def outputs_path(self) -> Path:
-        return self.data_path / "outputs"
 
 
 # Singleton instance

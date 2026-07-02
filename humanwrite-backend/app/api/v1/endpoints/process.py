@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Depends, Security
 from fastapi.security import APIKeyHeader
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+import secrets
 
 from app.config import settings
 from app.core.pipeline import apply_style, apply_style_stream
@@ -15,7 +16,7 @@ router = APIRouter()
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
 
 def verify_api_key(api_key: str = Security(api_key_header)):
-    if api_key != settings.API_KEY:
+    if not secrets.compare_digest(api_key, settings.API_KEY):
         raise HTTPException(status_code=403, detail="Could not validate credentials")
     return api_key
 

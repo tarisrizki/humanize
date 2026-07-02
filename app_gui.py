@@ -6,7 +6,6 @@ pre-trained global style profile.
 
 import difflib
 import os
-import io
 import re
 import time
 import json
@@ -183,7 +182,6 @@ def get_global_style() -> dict:
 
 def process_stream(response, thought_placeholder=None, info_placeholder=None):
     """Generator to process the SSE streaming response from the backend."""
-    import streamlit as st
     current_event = None
     for line in response.iter_lines(decode_unicode=True):
         if not line:
@@ -206,13 +204,13 @@ def process_stream(response, thought_placeholder=None, info_placeholder=None):
                                 st.markdown(f"```text\n{chunk.replace('<thought>', '').replace('</thought>', '').strip()}\n```")
                         continue
                     yield chunk
-                except Exception:
-                    pass
+                except Exception as e:
+                    st.error(f"Error parsing stream: {e}")
             elif current_event == "metrics":
                 try:
                     st.session_state["last_metrics"] = json.loads(data_str)
-                except json.JSONDecodeError:
-                    pass
+                except json.JSONDecodeError as e:
+                    st.error(f"Error parsing metrics: {e}")
 
 def render_diff(old_text: str, new_text: str) -> str:
     diff = difflib.unified_diff(
@@ -408,64 +406,12 @@ with tab1:
 
         # ── Evaluasi (Dipindah dari Tab 2) ────────────────────────────────────
         st.markdown("---")
-        st.markdown("### 🤖 Evaluasi LLM Judge & Anti-Deteksi")
-        
-        # LLM Judge
-        st.markdown("#### ⚖️ LLM as a Judge")
-        st.caption("Evaluasi kualitas hasil humanize menggunakan penalaran LLM Llama-3.3.")
-        if st.button("🤖 Jalankan Evaluasi Otomatis", use_container_width=True):
-            with st.spinner("Llama-3.3-70b sedang mengevaluasi kualitas tulisan..."):
-                try:
-                    resp = requests.post(
-                        f"{BACKEND_URL}/api/v1/evaluate/judge",
-                        json={
-                            "record_id":      st.session_state["last_record_id"],
-                            "original_text":  original_draft,
-                            "humanized_text": final_text,
-                            "style_mode":     st.session_state.get("style_mode_val", "populer"),
-                            "language":       profile.get("language", "id"),
-                        },
-                        headers=HEADERS,
-                        timeout=60
-                    )
-                    resp.raise_for_status()
-                    data = resp.json()
-                    
-                    score = data["overall_score"]
-                    color = "green" if score >= 70 else "orange" if score >= 50 else "red"
-                    
-                    st.markdown(f"### Skor Keseluruhan: :{color}[{score}/100]")
-                    
-                    col_j1, col_j2 = st.columns(2)
-                    breakdown = data["breakdown"]
-                    
-                    with col_j1:
-                        for dim in ["naturalness", "register_compliance", "content_fidelity"]:
-                            d = breakdown[dim]
-                            st.metric(dim.replace("_", " ").title(), f"{d['score']}/10")
-                            st.caption(d["reason"])
-                            
-                    with col_j2:
-                        for dim in ["eyd_grammar", "anti_detection"]:
-                            d = breakdown[dim]
-                            st.metric(dim.replace("_", " ").title(), f"{d['score']}/10")
-                            st.caption(d["reason"])
-                            
-                    if breakdown["critical_issues"]:
-                        st.error("⚠️ Isu Kritis:\n" + "\n".join(f"• {i}" for i in breakdown["critical_issues"]))
-                        
-                    st.success(f"✅ Sorotan Terbaik: *{breakdown['highlight']}*")
-                    st.warning(f"⚠️ Paling AI: *{breakdown['worst_sentence']}*")
-                except Exception as e:
-                    st.error(f"Gagal menjalankan LLM Judge: {e}")
-        # Turnitin Safety
-        st.markdown("---")
-        st.markdown("#### 🛡️ Turnitin Safety")
+        st.markdown("### 🛡️ Turnitin Safety & Anti-Deteksi")
 
         if "last_record_id" in st.session_state:
             # Hitung overlap lokal jika endpoint evaluasi belum menghitung
             try:
-                from app.core.writing_engine import check_trigram_overlap
+                from app.core.text_utils import check_trigram_overlap
                 trigram_overlap = check_trigram_overlap(original_draft, final_text)
             except Exception:
                 trigram_overlap = metrics.get("trigram_overlap", 0) if metrics else 0
@@ -493,49 +439,7 @@ with tab1:
         else:
             st.info("Humanize teks terlebih dahulu untuk melihat Turnitin Safety Score.")
                     
-        # GPTZero Form
-        st.markdown("---")
-        st.markdown("#### 🕵️ GPTZero Manual Input")
-        st.caption("Masukkan skor dari hasil pengecekan manual di situs GPTZero.")
-        with st.form("gptzero_form"):
-            st.markdown(f"**Record ID**: {st.session_state['last_record_id']}")
-            
-            st.markdown("**Output A (Standard)**")
-            col_a1, col_a2, col_a3 = st.columns(3)
-            with col_a1:
-                gptzero_std_ai = st.number_input("Standard AI (%)", min_value=0, max_value=100, value=0)
-            with col_a2:
-                gptzero_std_mixed = st.number_input("Standard Mixed (%)", min_value=0, max_value=100, value=0)
-            with col_a3:
-                gptzero_std_human = st.number_input("Standard Human (%)", min_value=0, max_value=100, value=100)
-                
-            st.markdown("**Output (Humanized)**")
-            col_b1, col_b2, col_b3 = st.columns(3)
-            with col_b1:
-                gptzero_enh_ai = st.number_input("Humanized AI (%)", min_value=0, max_value=100, value=0)
-            with col_b2:
-                gptzero_enh_mixed = st.number_input("Humanized Mixed (%)", min_value=0, max_value=100, value=0)
-            with col_b3:
-                gptzero_enh_human = st.number_input("Humanized Human (%)", min_value=0, max_value=100, value=100)
-            
-            submitted = st.form_submit_button("Simpan Skor Anti-Deteksi")
-            if submitted:
-                try:
-                    resp = requests.patch(
-                        f"{BACKEND_URL}/api/v1/evaluate/gptzero",
-                        json={
-                            "record_id": st.session_state['last_record_id'],
-                            "gptzero_enh_ai": gptzero_enh_ai,
-                            "gptzero_enh_mixed": gptzero_enh_mixed,
-                            "gptzero_enh_human": gptzero_enh_human
-                        },
-                        headers=HEADERS,
-                    )
-                    resp.raise_for_status()
-                    st.toast("✅ Skor GPTZero berhasil disimpan di riwayat!")
-                    st.success("Skor GPTZero berhasil diperbarui!")
-                except Exception as e:
-                    st.error(f"Gagal menyimpan skor GPTZero: {e}")
+
 
 # ── Tab 2: History ────────────────────────────────────────────────────────────
 with tab2:

@@ -8,8 +8,7 @@ def test_build_system_prompt_en():
     profile = StyleProfile(
         user_id="test1",
         language="en",
-        avg_sentence_length=15.5,
-        emotion_register="formal"
+        avg_sentence_length=15.5
     )
     prompt = _build_system_prompt(profile, paragraph_count=2)
     assert "Write in natural, idiomatic English only" in prompt

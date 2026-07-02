@@ -18,9 +18,24 @@ class ProcessedText(BaseModel):
         description="Human-readable list of changes applied to the draft",
     )
 
+class EvaluateRunRequest(BaseModel):
+    style_mode: str
+    language: str = "id"
+    original_text: str
+    output_text: str
 
-# ── Generic ───────────────────────────────────────────────────────────────────
+class EvaluateRunResponse(BaseModel):
+    record_id: int
+    trigram_overlap: float
 
-class ErrorResponse(BaseModel):
-    """Standard error response."""
-    detail: str
+class EvaluationRecord(BaseModel):
+    id: int
+    timestamp: str
+    style_mode: str
+    language: str
+    trigram_overlap: float | None = None
+    enhanced_judge_score: float | None = None
+    gptzero_enh_human: float | None = None
+
+class HistoryResponse(BaseModel):
+    data: list[EvaluationRecord]

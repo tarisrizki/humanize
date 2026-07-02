@@ -191,126 +191,12 @@ def _parse_text(text: str, lang: str) -> ParsedDoc:
 
 # ── Language detection ────────────────────────────────────────────────────────
 
-def _detect_language(texts: list[str]) -> str:
-    """Detect the dominant language across multiple texts."""
-    combined = " ".join(texts)[:5000]
-    try:
-        lang = detect(combined)
-        if lang in ("id", "ms"):
-            return "id"
-        if lang == "en":
-            return "en"
-        return "mixed"
-    except Exception:
-        return "en"
-
-
 # ── Analysis helpers (work with ParsedDoc) ────────────────────────────────────
 
 def _sentence_lengths(doc: ParsedDoc) -> list[int]:
     """Return word-count per sentence."""
     return [len([t for t in s.tokens if not t.is_punct and not t.is_space])
             for s in doc.sentences]
-
-
-def _active_voice_ratio(doc: ParsedDoc, lang: str) -> float:
-    """Estimate active vs passive voice ratio using dependency parsing."""
-    total = len(doc.sentences)
-    if total == 0:
-        return 1.0
-
-    passive = 0
-    for sent in doc.sentences:
-        for token in sent.tokens:
-            if lang == "en":
-                # English: look for auxpass / nsubjpass
-                if token.dep in ("auxpass", "nsubjpass"):
-                    passive += 1
-                    break
-            else:
-                # Indonesian: passive often marked with "di-" prefix verbs
-                # or dependency relation containing "pass"
-                if "pass" in token.dep.lower():
-                    passive += 1
-                    break
-                if token.pos == "VERB" and token.lower.startswith("di"):
-                    passive += 1
-                    break
-
-    return round(1.0 - (passive / total), 4)
-
-
-def _count_transitions(text_lower: str, lang: str) -> Counter:
-    """Count transition word/phrase occurrences."""
-    words = TRANSITION_WORDS_EN if lang == "en" else TRANSITION_WORDS_EN | TRANSITION_WORDS_ID
-    counter: Counter = Counter()
-    for phrase in words:
-        count = text_lower.count(phrase)
-        if count > 0:
-            counter[phrase] = count
-    return counter
-
-
-def _hedging_frequency(text_lower: str, sentence_count: int, lang: str) -> float:
-    """Hedging expressions per sentence."""
-    words = HEDGING_WORDS_EN if lang == "en" else HEDGING_WORDS_EN | HEDGING_WORDS_ID
-    total = sum(1 for w in words if w in text_lower)
-    return round(total / max(sentence_count, 1), 3)
-
-
-def _emotion_register(text_lower: str, lang: str) -> str:
-    """Heuristic: formal vs informal vs neutral."""
-    if lang == "id":
-        formal_count = sum(1 for w in FORMAL_MARKERS_ID if w in text_lower)
-        informal_count = sum(1 for w in INFORMAL_MARKERS_ID if w in text_lower)
-    else:
-        formal_count = sum(1 for w in FORMAL_MARKERS_EN if w in text_lower)
-        informal_count = sum(1 for w in INFORMAL_MARKERS_EN if w in text_lower)
-
-    if formal_count > informal_count + 2:
-        return "formal"
-    if informal_count > formal_count + 2:
-        return "informal"
-    return "neutral"
-
-
-def _favorite_phrases(doc: ParsedDoc, top_n: int = 10) -> list[str]:
-    """Extract recurring n-grams (2-4 words), excluding stopwords-only phrases."""
-    tokens = [t.lower for t in doc.word_tokens]
-
-    STOPWORDS = {
-        "the", "a", "an", "is", "are", "in", "of", "to", "and", "for",
-        "on", "it", "that", "this", "with", "as", "was", "at", "by", "from",
-        # Indonesian stopwords
-        "yang", "di", "dan", "ke", "dari", "ini", "itu", "dengan",
-        "untuk", "pada", "adalah", "akan", "juga", "sudah", "tidak",
-    }
-
-    counter: Counter = Counter()
-    for n in (2, 3, 4):
-        for i in range(len(tokens) - n + 1):
-            gram = tuple(tokens[i : i + n])
-            if not all(t in STOPWORDS for t in gram):
-                counter[" ".join(gram)] += 1
-
-    return [phrase for phrase, count in counter.most_common(top_n) if count >= 2]
-
-
-def _lexical_diversity(doc: ParsedDoc) -> float:
-    """Type-Token Ratio: unique words / total words."""
-    tokens = [t.lower for t in doc.word_tokens]
-    if not tokens:
-        return 0.0
-    return round(len(set(tokens)) / len(tokens), 4)
-
-
-def _paragraph_length_avg(text: str, doc: ParsedDoc) -> float:
-    """Average number of sentences per paragraph."""
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-    if not paragraphs:
-        return 0.0
-    sentence_count = len(doc.sentences)
-    return round(sentence_count / len(paragraphs), 2)
 
 
 def _extract_few_shot_examples(texts: list[str], avg_sentence_length: float, max_words: int = 500) -> list[str]:

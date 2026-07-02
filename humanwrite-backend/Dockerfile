@@ -14,7 +14,7 @@ RUN pip install uv
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies using uv
-RUN uv pip install --system -r pyproject.toml
+RUN uv pip install --system .
 
 # Pre-download NLP models to be cached in the image
 RUN python -m spacy download en_core_web_sm

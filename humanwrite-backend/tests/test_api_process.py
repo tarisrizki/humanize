@@ -10,7 +10,7 @@ from app.config import settings
 def test_process_endpoint(mock_apply_style_stream, client):
     """Test that /process returns valid SSE stream with text and metrics events."""
 
-    async def async_generator(*args, **kwargs):
+    async def async_generator(*_args, **_kwargs):
         # Simulate SSE format used by apply_style_stream
         yield 'event: text\ndata: "Hello "\n\n'
         yield 'event: text\ndata: "world."\n\n'
@@ -20,11 +20,11 @@ def test_process_endpoint(mock_apply_style_stream, client):
 
     # Setup dummy global profile
     profile = StyleProfile(user_id="global", language="en")
-    profile_path = settings.profiles_path / "global_style.json"
+    profile_path = settings.profiles_path / "populer_en_style.json"
     save_json(profile_path, profile.model_dump())
 
     # Call process
-    response = client.post("/api/v1/process", json={"draft": "Draft text"})
+    response = client.post("/api/v1/process", json={"draft": "Draft text"}, headers={"X-API-Key": settings.API_KEY})
 
     assert response.status_code == 200
 
@@ -37,10 +37,10 @@ def test_process_endpoint(mock_apply_style_stream, client):
 
 def test_process_no_profile(client):
     """Test that /process returns 503 when no style profile exists."""
-    profile_path = settings.profiles_path / "global_style.json"
+    profile_path = settings.profiles_path / "populer_id_style.json"
     if profile_path.exists():
         profile_path.unlink()
 
-    response = client.post("/api/v1/process", json={"draft": "Draft"})
+    response = client.post("/api/v1/process", json={"draft": "Draft"}, headers={"X-API-Key": settings.API_KEY})
     assert response.status_code == 503
-    assert "Style profile not found" in response.json()["detail"]
+    assert "Style profile for populer" in response.json()["detail"]

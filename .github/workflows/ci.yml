@@ -22,7 +22,7 @@ jobs:
       
     - name: Install dependencies
       working-directory: ./humanwrite-backend
-      run: uv pip install --system -r pyproject.toml
+      run: uv pip install --system .
       
     - name: Lint with Ruff
       working-directory: ./humanwrite-backend
