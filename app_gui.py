@@ -159,6 +159,8 @@ st.markdown("""
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000")
+API_KEY = os.environ.get("API_KEY", "humanwrite-secret-key")
+HEADERS = {"X-API-Key": API_KEY}
 
 
 def check_backend() -> bool:
@@ -333,6 +335,7 @@ with tab1:
                 process_resp = requests.post(
                     f"{BACKEND_URL}/api/v1/process",
                     json={"draft": draft_text, "style_mode": style_mode_val},
+                    headers=HEADERS,
                     stream=True,
                     timeout=120,
                 )
@@ -361,6 +364,7 @@ with tab1:
                         "original_text": draft_text,
                         "output_text": final_text,
                     },
+                    headers=HEADERS,
                     timeout=10,
                 )
                 if eval_resp.status_code == 200:
@@ -421,6 +425,7 @@ with tab1:
                             "style_mode":     st.session_state.get("style_mode_val", "populer"),
                             "language":       profile.get("language", "id"),
                         },
+                        headers=HEADERS,
                         timeout=60
                     )
                     resp.raise_for_status()
@@ -523,7 +528,8 @@ with tab1:
                             "gptzero_enh_ai": gptzero_enh_ai,
                             "gptzero_enh_mixed": gptzero_enh_mixed,
                             "gptzero_enh_human": gptzero_enh_human
-                        }
+                        },
+                        headers=HEADERS,
                     )
                     resp.raise_for_status()
                     st.toast("✅ Skor GPTZero berhasil disimpan di riwayat!")
@@ -538,7 +544,7 @@ with tab2:
     
     if st.button("🔄 Segarkan Data & Dasbor"):
         try:
-            resp = requests.get(f"{BACKEND_URL}/api/v1/evaluate/history")
+            resp = requests.get(f"{BACKEND_URL}/api/v1/evaluate/history", headers=HEADERS)
             if resp.status_code == 200:
                 history_data = resp.json().get("data", [])
                 if history_data:

@@ -3,6 +3,11 @@ import re
 import statistics
 from typing import List
 
+from dotenv import load_dotenv
+load_dotenv()
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 from app.core.pipeline import apply_style
 from app.core.text_utils import _enforce_min_sentences
 from app.models.style_profile import StyleProfile
@@ -43,7 +48,16 @@ def check_blacklist(text: str) -> List[str]:
 
 async def main():
     print("=== PENGUJIAN 3 PARAGRAF TEKS AKADEMIK ===")
-    style = StyleProfile(user_id="test", language="id", style_mode="akademik")
+    import os
+    try:
+        from app.storage.json_store import load_json
+        profile_path = os.path.join(os.path.dirname(__file__), "data", "profiles", "akademik_id_style.json")
+        profile_data = load_json(profile_path)
+        style = StyleProfile(**profile_data)
+        print("Loaded akademik_id_style.json successfully!")
+    except Exception as e:
+        print(f"Failed to load profile: {e}")
+        style = StyleProfile(user_id="test", language="id", style_mode="akademik")
     
     for i in range(1, 6):
         print(f"\n[ RUN {i} ]")

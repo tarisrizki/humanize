@@ -5,7 +5,10 @@ import sys
 # Tambahkan backend dir ke sys.path agar import absolute app.* berfungsi
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.core.writing_engine import apply_style
+from dotenv import load_dotenv
+load_dotenv()
+
+
 from app.models.style_profile import StyleProfile
 
 # Draft akademik untuk diujikan
@@ -23,7 +26,14 @@ async def run_tests():
     
     for mode in modes:
         print(f"\n--- MODE: {mode.upper()} ---")
-        style = StyleProfile(user_id="test", language="id", style_mode=mode)
+        try:
+            from app.storage.json_store import load_json
+            profile_path = os.path.join(os.path.dirname(__file__), "data", "profiles", f"{mode}_id_style.json")
+            profile_data = load_json(profile_path)
+            style = StyleProfile(**profile_data)
+        except Exception as e:
+            print(f"Failed to load profile for {mode}: {e}")
+            style = StyleProfile(user_id="test", language="id", style_mode=mode)
         
         for i in range(1, 4):
             try:

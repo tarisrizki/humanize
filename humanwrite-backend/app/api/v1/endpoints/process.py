@@ -20,15 +20,18 @@ def verify_api_key(api_key: str = Security(api_key_header)):
     return api_key
 
 @router.get("/style", response_model=StyleProfile)
-async def get_global_style(mode: str = "populer") -> StyleProfile:
+async def get_global_style(mode: str = "populer", lang: str = "id") -> StyleProfile:
     """Return the pre-trained Global StyleProfile."""
-    profile_path = settings.profiles_path / f"{mode}_style.json"
+    profile_path = settings.profiles_path / f"{mode}_{lang}_style.json"
     if not profile_path.exists():
-        profile_path = settings.profiles_path / "global_style.json"
+        # Fallback to older format or ID
+        profile_path = settings.profiles_path / f"{mode}_style.json"
+        
     if not profile_path.exists():
         raise HTTPException(status_code=404, detail="Style profile not found.")
     data = load_json(profile_path)
     data["style_mode"] = mode
+    data["language"] = lang
     return StyleProfile(**data)
 
 
@@ -39,21 +42,30 @@ async def process_draft(request: ProcessRequest, api_key: str = Depends(verify_a
     Requires that the global style has been trained offline.
     """
     mode = request.style_mode or "populer"
-    profile_path = settings.profiles_path / f"{mode}_style.json"
+    
+    from langdetect import detect
+    try:
+        input_lang = "id" if detect(request.draft[:2000]) in ("id", "ms") else "en"
+    except:
+        input_lang = "id"
+        
+    profile_path = settings.profiles_path / f"{mode}_{input_lang}_style.json"
     
     if not profile_path.exists():
-        profile_path = settings.profiles_path / "global_style.json"
+        # Fallback
+        profile_path = settings.profiles_path / f"{mode}_style.json"
         
     if not profile_path.exists():
         raise HTTPException(
             status_code=503,
-            detail="Style profile not found. Run training script first.",
+            detail=f"Style profile for {mode} ({input_lang}) not found. Run training script first.",
         )
 
     # Load the style profile
     try:
         profile_data = load_json(profile_path)
-        profile_data["style_mode"] = request.style_mode
+        profile_data["style_mode"] = mode
+        profile_data["language"] = input_lang
         style = StyleProfile(**profile_data)
     except Exception as e:
         raise HTTPException(

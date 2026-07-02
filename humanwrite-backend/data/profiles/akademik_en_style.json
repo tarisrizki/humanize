@@ -1,0 +1,20 @@
+{
+    "user_id": "mode_akademik_en",
+    "style_mode": "akademik",
+    "language": "en",
+    "avg_sentence_length": 24.587274491298587,
+    "sentence_length_std": 10.209731329486232,
+    "flesch_reading_ease": 19.60415674845536,
+    "active_voice_ratio": 0.6709015363347994,
+    "emotion_register": "formal",
+    "top_transitions": [],
+    "hedging_frequency": 0.0,
+    "favorite_phrases": [],
+    "lexical_diversity": 0.6534412259102675,
+    "paragraph_length_avg": 0.0,
+    "few_shot_examples_id": [],
+    "few_shot_examples_en": [
+        "Each year, the American Cancer Society estimates the numbers of new cancer cases and deaths that will occur in the United States and compiles the most recent data on cancer incidence, mortality, and survival. Incidence data, available through 2015, were collected by the Surveillance, Epidemiology, and End Results Program; the National Program of Cancer Registries; and the North American Association of Central Cancer Registries. Mortality data, available through 2016, were collected by the National Center for Health Statistics. In 2019, 1,762,450 new cancer cases and 606,880 cancer deaths are projected to occur in the United States. Over the past decade of data, the cancer incidence rate (2006-2015) was stable in women and declined by approximately 2% per year in men, whereas the cancer death rate (2007-2016) declined annually by 1.4% and 1.8%, respectively. The overall cancer death rate dropped continuously from 1991 to 2016 by a total of 27%, translating into approximately 2,629,200 fewer cancer deaths than would have been expected if death rates had remained at their peak. Although the racial gap in cancer mortality is slowly narrowing, socioeconomic inequalities are widening, with the most notable gaps for the most preventable cancers. For example, compared with the most affluent counties, mortality rates in the poorest counties were 2-fold higher for cervical cancer and 40% higher for male lung and liver cancers during 2012-2016. Some states are home to both the wealthiest and the poorest counties, suggesting the opportunity for more equitable dissemination of effective cancer prevention, early detection, and treatment strategies. A broader application of existing cancer control knowledge with an emphasis on disadvantaged groups would undoubtedly accelerate progress against cancer.",
+        "Structural equation modeling (SEM) has become a quasi-standard in marketing and management research when it comes to analyzing the cause-effect relations between latent constructs. For most researchers, SEM is equivalent to carrying out covariance-based SEM (CB-SEM). While marketing researchers have a basic understanding of CB-SEM, most of them are only barely familiar with the other useful approach to SEM-partial least squares SEM (PLS-SEM). The current paper reviews PLS-SEM and its algorithm, and provides an overview of when it can be most appropriately applied, indicating its potential and limitations for future research. The authors conclude that PLS-SEM path modeling, if appropriately applied, is indeed a \"silver bullet\" for estimating causal models in many theoretical models and empirical data situations."
+    ]
+}

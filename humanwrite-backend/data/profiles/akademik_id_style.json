@@ -1,0 +1,20 @@
+{
+    "user_id": "mode_akademik_id",
+    "style_mode": "akademik",
+    "language": "id",
+    "avg_sentence_length": 24.794776450950113,
+    "sentence_length_std": 12.458460037618782,
+    "flesch_reading_ease": -41.6658989922995,
+    "active_voice_ratio": 0.49812198989029244,
+    "emotion_register": "formal",
+    "top_transitions": [],
+    "hedging_frequency": 0.0,
+    "favorite_phrases": [],
+    "lexical_diversity": 0.6486383859205134,
+    "paragraph_length_avg": 0.0,
+    "few_shot_examples_id": [
+        "Buku ini berisi,:pengaturan fugsional tubuh manusia dan pengaturan llingkungan dalam, sel dan fungsinya, pengaturan genetik sintesis protein, fungsi sel, reproduksi sel, transpor zat melalui membran sel, potensi membran dan potensi aksi,konteraksi otot rangka, eksitasi otot rangkapenghantaran neoromuskuler, otot jantung sebagai sebuah pompa dan fungsi katup-katup jantung, gagal jantung, syok sirkulasi dan fisiologi pengobatan.",
+        "kebijakan publik adalah satu studi dalam bidang sosial yang berkembang sangat pesat.Pelbagai masalah dan fonomena sosial yang terjadi dapat didekati dan diselesaikan dengan kebijakan publik. Buku ini merupakan revisi dari sebelumnya yang dulu terdapat 9 bab kini hanya 7 bab, dimana adanya penggabungan dengan bab lain. Adapun isi dari buku ini yaitu dimulai dari konsep dasar kebijakan publik, faktor-faktor kebijakan publik, pendekatan dalam kebijakan publik, agenda setting dan perumusan masalah, formulasi kebijkan, implementasi kebijakan, dan terakkhir mengenai evaluasi kebijakan publik."
+    ],
+    "few_shot_examples_en": []
+}

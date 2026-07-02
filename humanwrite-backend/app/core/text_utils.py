@@ -210,9 +210,16 @@ def _inject_short_sentences(text: str, lang: str, style_mode: str = "populer") -
             continue
         sentences = re.split(r'(?<=[.!?])\s+', para.strip())
         new_sentences = []
+        injected = False
         for sent in sentences:
             new_sentences.append(sent)
-            if len(sent.split()) > 20 and random.random() < 0.10:
+            if len(sent.split()) > 18 and random.random() < 0.40:
+                new_sentences.append(random.choice(short_list))
+                injected = True
+        
+        # Ensure at least one short sentence in a long paragraph
+        if not injected and len(sentences) >= 3:
+            if random.random() < 0.5:
                 new_sentences.append(random.choice(short_list))
         result.append(' '.join(new_sentences))
     return '\n'.join(result)
@@ -326,6 +333,9 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
             # "di sisi lain" → variasi
             (r'(?i)^di sisi lain,?\s*', 'Sebaliknya, '),
             (r'(?i)\bdi sisi lain\b', 'sebaliknya'),
+
+            # sisa "tersebut" yang tidak tertangkap frasa di atas
+            (r'(?i)\btersebut\b', 'itu'),
         ]
 
         # Apply universal replacements dengan preserve case
@@ -673,7 +683,7 @@ def _score_human_likelihood(
         ]
 
     text_lower = text.lower()
-    ai_count = sum(1 for w in ai_words if w in text_lower)
+    ai_count = sum(1 for w in ai_words if re.search(r'\b' + re.escape(w) + r'\b', text_lower))
     # Penalti per kata blacklist yang tersisa
     blacklist_score = max(0.0, 1.0 - (ai_count * 0.15))
     score += blacklist_score * 0.25

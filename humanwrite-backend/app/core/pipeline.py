@@ -33,8 +33,8 @@ async def apply_style_stream(
 
     drafter_agent = Agent(
         model=FallbackModel(
-            "groq:llama-3.3-70b-versatile",
             "groq:llama-3.1-8b-instant",
+            "groq:llama-3.3-70b-versatile",
         ),
         system_prompt=system_prompt,
     )
@@ -112,15 +112,22 @@ async def apply_style_stream(
             import logging
             logging.exception("Pass 2 structural rewrite failed (Timeout/API Error)")
 
+    # --- Apply Programmatic Humanization ---
+    full_text = _programmatic_sentence_humanize(full_text, input_lang, style_mode)
+    full_text = _apply_post_processing(full_text, input_lang, style_mode)
+    full_text = _inject_short_sentences(full_text, input_lang, style_mode)
+
     # Pass 3: Editor Agent for Polishing (Streaming)
     editor_agent = Agent(
         model="groq:llama-3.1-8b-instant",
         system_prompt=(
             "Tugasmu HANYA SATU: membersihkan teks dari sisa-sisa gaya AI dan memastikan "
-            "tata bahasa (EYD) sempurna. DILARANG KERAS mengubah makna, menambah informasi baru, "
-            "atau merusak jumlah paragraf. Hapus transisi kaku seperti 'Oleh karena itu', "
+            "tata bahasanya luwes, natural, dan mengalir seperti tulisan jurnalis/penulis manusia senior. "
+            "DILARANG KERAS mengubah makna, membuang kalimat, "
+            "atau merusak jumlah paragraf. Panjang teks (jumlah kata) harus TETAP SAMA atau lebih panjang. "
+            "Hapus transisi kaku seperti 'Oleh karena itu', "
             "'Selain itu', 'Hal ini menunjukkan', 'Dengan demikian', dll. Ganti dengan kata santai "
-            "atau hilangkan sama sekali.\n"
+            "atau hilangkan sama sekali tanpa membuang informasi intinya.\n"
             "Langsung berikan teks akhir tanpa <thought> dan tanpa komentar."
         )
     )
@@ -131,7 +138,7 @@ async def apply_style_stream(
             model_settings={"temperature": 0.5},
         ) as editor_stream:
             final_polished_text = ""
-            async for chunk in editor_stream.stream():
+            async for chunk in editor_stream.stream_text(delta=True):
                 yield f"event: text\ndata: {json.dumps(chunk)}\n\n"
                 final_polished_text += chunk
             full_text = final_polished_text
@@ -163,20 +170,20 @@ async def apply_style(
     
     try:
         async for chunk in stream_gen:
-            if chunk.startswith("event: "):
-                event_type = chunk[7:].strip()
-                pass
-            elif chunk.startswith("data: "):
-                data_str = chunk[6:].strip()
-                if data_str:
-                    try:
-                        data = json.loads(data_str)
-                        if isinstance(data, dict) and "changes_made" in data:
-                            changes = data["changes_made"]
-                        elif isinstance(data, str) and "<!-- turnitin_refine -->" not in data and "<thought>" not in data:
-                            final_text += data
-                    except:
-                        pass
+            for line in chunk.split('\n'):
+                if line.startswith("event: "):
+                    event_type = line[7:].strip()
+                elif line.startswith("data: "):
+                    data_str = line[6:].strip()
+                    if data_str:
+                        try:
+                            data = json.loads(data_str)
+                            if isinstance(data, dict) and "changes_made" in data:
+                                changes = data["changes_made"]
+                            elif isinstance(data, str) and "<!-- turnitin_refine -->" not in data and "<thought>" not in data:
+                                final_text += data
+                        except:
+                            pass
     except Exception as e:
         import logging
         logging.exception("Error in apply_style")

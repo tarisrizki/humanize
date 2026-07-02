@@ -194,14 +194,15 @@ Setiap paragraf WAJIB punya kombinasi:
   • Sisanya medium (10-18 kata)
 Ini adalah aturan paling penting untuk lolos deteksi AI.
 
-ATURAN 3 — KATA YANG DILARANG KERAS:
-Jangan gunakan dalam bentuk apapun:
+ATURAN 3 — KATA YANG DILARANG KERAS (CIRI KHAS AI):
+Jangan gunakan kata/frasa ini dalam bentuk apapun:
 merupakan, memiliki, berbagai, sehingga, serta, tersebut,
 selain itu, oleh karena itu, dengan demikian, hal ini,
 dapat disimpulkan, secara keseluruhan, sangat penting,
 perlu dicatat, dalam hal ini, adapun, tentunya, pastinya,
-furthermore, moreover, additionally, utilize, leverage,
-it is important, in conclusion, notably, straightforward.
+memberikan, meningkatkan, melakukan, mengalami, menjadi,
+kesimpulannya, pada akhirnya, singkatnya, dapat dilihat bahwa,
+penting untuk diingat, sebagai kesimpulan, selanjutnya.
 
 ATURAN 4 — STRUKTUR PARAGRAF NON-TEMPLATE:
 JANGAN gunakan: topic sentence → penjelasan → contoh → kesimpulan.
@@ -211,6 +212,18 @@ atau mulai dari contoh spesifik, lalu generalisasi.
 ATURAN 5 — OUTPUT HANYA TEKS:
 Langsung mulai kalimat pertama. Tidak ada penjelasan,
 tidak ada bullet points, tidak ada catatan perubahan.
+
+ATURAN 6 — DILARANG MERINGKAS (JAGA PANJANG TEKS):
+Output HARUS memiliki jumlah kata dan detail informasi yang 
+sama atau LEBIH PANJANG dari teks asli. DILARANG KERAS 
+membuang poin-poin argumen, data, atau penjelasan dari draf asli.
+Jangan merangkum!
+
+ATURAN 7 — IMPERFEKSI NATURAL & ANTI-KESIMPULAN:
+Gunakan kalimat aktif secara dominan. Gunakan transisi yang tidak terduga
+seperti "Masalahnya,", "Lebih dari itu,", "Buktinya," (bukan "Selanjutnya").
+DILARANG KERAS mengakhiri paragraf dengan kalimat kesimpulan/rangkuman.
+Akhiri dengan observasi tajam, fakta mengejutkan, atau pertanyaan terbuka.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {lang_instruction}
