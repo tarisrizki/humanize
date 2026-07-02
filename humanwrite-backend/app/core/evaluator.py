@@ -366,7 +366,7 @@ async def run_llm_judge(
     import groq
     from app.config import settings
     
-    client = groq.AsyncGroq(api_key=settings.GROQ_API_KEY)
+    client = groq.AsyncGroq(api_key=settings.GROQ_API_KEY.get_secret_value())
 
     prompt = JUDGE_PROMPT_TEMPLATE.format(
         original_text=original_text,

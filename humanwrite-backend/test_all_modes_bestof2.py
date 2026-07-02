@@ -27,13 +27,11 @@ async def run_tests():
         
         for i in range(1, 4):
             try:
+                from app.core.pipeline import apply_style
+                from app.core.text_utils import _score_human_likelihood, _clean_input_draft
+                
                 result = await apply_style(DRAFT, style)
                 text = result.final_text
-                
-                # Kita tidak bisa langsung ambil score_1 vs score_2 karena itu di dalam fungsi
-                # Tapi kita bisa nge-print _score_human_likelihood terakhir
-                from app.core.writing_engine import _score_human_likelihood
-                from app.core.writing_engine import _clean_input_draft
                 
                 clean_draft = _clean_input_draft(DRAFT)
                 final_score = _score_human_likelihood(text, clean_draft, "id")

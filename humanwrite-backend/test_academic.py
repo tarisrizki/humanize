@@ -3,7 +3,8 @@ import re
 import statistics
 from typing import List
 
-from app.core.writing_engine import apply_style, _enforce_min_sentences
+from app.core.pipeline import apply_style
+from app.core.text_utils import _enforce_min_sentences
 from app.models.style_profile import StyleProfile
 
 # 3 paragraf teks akademik

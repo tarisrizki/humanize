@@ -370,13 +370,10 @@ def _extract_few_shot_examples(texts: list[str], avg_sentence_length: float, max
 
 def analyze_style(texts_id: list[str], texts_en: list[str], user_id: str = "anonymous") -> StyleProfile:
     """Analyze a collection of texts and produce a StyleProfile incrementally."""
-    texts = texts_id + texts_en
-    if not texts:
+    if not texts_id and not texts_en:
         return StyleProfile(user_id=user_id)
 
-    # Base language is ID as it's an Indonesian-first app, but it handles both
-    lang = "id"
-
+    texts_with_lang = [(t, "id") for t in texts_id] + [(t, "en") for t in texts_en]
 
     all_sent_lens = []
     flesch_scores = []
@@ -392,7 +389,7 @@ def analyze_style(texts_id: list[str], texts_en: list[str], user_id: str = "anon
     total_paragraphs = 0
 
     # Process sequentially to save memory
-    for text in texts:
+    for text, lang in texts_with_lang:
         text = text.strip()
         if not text:
             continue

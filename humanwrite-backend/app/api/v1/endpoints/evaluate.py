@@ -1,13 +1,14 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
+from app.config import settings
 from app.core.evaluator import SQLiteEvaluator, EvaluationRecord, run_llm_judge
-from app.core.writing_engine import check_trigram_overlap
+from app.core.text_utils import check_trigram_overlap
 from pathlib import Path
 
 router = APIRouter()
 
-evaluator = SQLiteEvaluator(db_path=str(Path("data") / "evaluations.db"))
+evaluator = SQLiteEvaluator(db_path=str(settings.data_path / "evaluations.db"))
 
 class EvaluationRequest(BaseModel):
     style_mode: str

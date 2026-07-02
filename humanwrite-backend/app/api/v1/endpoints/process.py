@@ -1,17 +1,23 @@
 """Process endpoint — rewrites a draft to match the user's writing style."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Security
+from fastapi.security import APIKeyHeader
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.config import settings
-from app.core.writing_engine import apply_style, apply_style_stream
+from app.core.pipeline import apply_style, apply_style_stream
 from app.models.schemas import ProcessedText, ProcessRequest
 from app.models.style_profile import StyleProfile
 from app.storage.json_store import load_json, save_json
 
 router = APIRouter()
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
 
+def verify_api_key(api_key: str = Security(api_key_header)):
+    if api_key != settings.API_KEY:
+        raise HTTPException(status_code=403, detail="Could not validate credentials")
+    return api_key
 
 @router.get("/style", response_model=StyleProfile)
 async def get_global_style(mode: str = "populer") -> StyleProfile:
@@ -27,7 +33,7 @@ async def get_global_style(mode: str = "populer") -> StyleProfile:
 
 
 @router.post("/process")
-async def process_draft(request: ProcessRequest) -> StreamingResponse:
+async def process_draft(request: ProcessRequest, api_key: str = Depends(verify_api_key)) -> StreamingResponse:
     """Rewrite a draft to match the Global StyleProfile and stream the result.
 
     Requires that the global style has been trained offline.

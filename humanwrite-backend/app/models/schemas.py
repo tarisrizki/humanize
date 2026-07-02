@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 class ProcessRequest(BaseModel):
     """Request body for the /process endpoint."""
-    draft: str = Field(..., min_length=1, description="The draft text to rewrite")
+    draft: str = Field(..., min_length=1, max_length=20000, description="The draft text to rewrite")
     style_mode: str = Field(default="populer", description="The chosen style mode")
 
 class ProcessedText(BaseModel):

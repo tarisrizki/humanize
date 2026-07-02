@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from app.core.writing_engine import apply_style, _build_system_prompt
+from app.core.pipeline import apply_style
+from app.core.prompts import _build_system_prompt
 from app.models.style_profile import StyleProfile
 
 def test_build_system_prompt_en():
@@ -22,7 +23,7 @@ def test_build_system_prompt_id():
     assert "Tulis HANYA dalam Bahasa Indonesia" in prompt
 
 @pytest.mark.asyncio
-@patch("app.core.writing_engine.Agent")
+@patch("app.core.pipeline.Agent")
 async def test_apply_style(mock_agent_class):
     # Mock the Agent instance and its run method
     mock_agent_instance = MagicMock()

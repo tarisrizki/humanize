@@ -4,6 +4,8 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+from pydantic import SecretStr
+
 class Settings(BaseSettings):
     """HumanWrite AI configuration."""
 
@@ -14,7 +16,10 @@ class Settings(BaseSettings):
     )
 
     # Groq API
-    GROQ_API_KEY: str = "your_api_key_here"
+    GROQ_API_KEY: SecretStr
+    
+    # Internal API Auth (Optional)
+    API_KEY: str = "humanwrite-secret-key"
 
     # spaCy model (English only)
     SPACY_MODEL_EN: str = "en_core_web_sm"

@@ -1,30 +1,11 @@
-"""Writing Engine — Rewrites draft text to match a user's StyleProfile.
-
-Uses PydanticAI with Groq to perform intelligent rewriting that evades AI detection.
-"""
-
-import asyncio
-import json
-import os
 import re
 import random
 import statistics
-from typing import AsyncGenerator
-
-from pydantic_ai import Agent
-from pydantic_ai.models.fallback import FallbackModel
-from langdetect import detect
-
-from app.config import settings
-from app.models.schemas import ProcessedText
-from app.models.style_profile import StyleProfile
-
 
 def _count_paragraphs(text: str) -> int:
     """Count paragraphs in text (separated by double newlines or single newlines with content)."""
     paragraphs = [p.strip() for p in re.split(r'\n\s*\n|\n', text) if p.strip()]
     return len(paragraphs)
-
 
 def _clean_input_draft(draft: str) -> str:
     """Remove web artifacts from the input draft before sending to LLM."""
@@ -40,239 +21,6 @@ def _clean_input_draft(draft: str) -> str:
     draft = re.sub(r'\n{3,}', '\n\n', draft)
     draft = re.sub(r' {2,}', ' ', draft)
     return draft.strip()
-
-
-def _build_system_prompt(style: StyleProfile, paragraph_count: int) -> str:
-    style_mode = getattr(style, 'style_mode', 'populer')
-
-    if style.language == "id":
-        lang_instruction = (
-            "Tulis HANYA dalam Bahasa Indonesia yang baik dan benar. "
-            "EYD wajib dipatuhi. Jangan campur dengan bahasa lain."
-        )
-    elif style.language == "mixed":
-        lang_instruction = (
-            "Pertahankan pola campur kode asli dari draf — "
-            "jika draf Indonesia, output Indonesia. "
-            "Jika draf campuran, pertahankan rasio yang sama."
-        )
-    else:
-        lang_instruction = "Write in natural, idiomatic English only."
-
-    few_shot_text = ""
-    if style.language in ("id", "mixed"):
-        examples = getattr(style, 'few_shot_examples_id', []) or \
-                   getattr(style, 'few_shot_examples', [])
-    else:
-        examples = getattr(style, 'few_shot_examples_en', []) or \
-                   getattr(style, 'few_shot_examples', [])
-
-    if examples:
-        examples_str = "\n\n---\n\n".join(examples[:4])
-        few_shot_text = f"""
-## PANDUAN GAYA — WAJIB DITIRU
-Berikut contoh tulisan manusia nyata. Tiru irama, 
-panjang kalimat, pilihan kata, dan alur paragrafnya.
-Ini adalah standar yang harus dicapai:
-
-{examples_str}
-
----
-"""
-
-    if style_mode == "akademik":
-        register_rules = f"""
-## REGISTER: AKADEMIK
-
-STRUKTUR PARAGRAF WAJIB (minimum {paragraph_count} paragraf):
-Setiap paragraf HARUS mengandung kelima elemen ini:
-1. Kalimat pembuka yang tidak klise (10-20 kata)
-2. Kalimat analitis panjang dengan nuansa (22-32 kata) 
-3. Kalimat medium yang memperkuat (12-18 kata)
-4. Kalimat catatan pendek yang mengejutkan (4-8 kata) 
-   — contoh: "Angka ini cukup mengkhawatirkan." 
-              "Temuan ini tidak bisa diabaikan."
-              "Ironisnya, justru sebaliknya."
-5. Kalimat penutup yang membuka pertanyaan baru 
-   atau memberi perspektif segar (12-20 kata)
-
-WAJIB DIGUNAKAN — HEDGING AKADEMIK NATURAL:
-Sisipkan salah satu per paragraf (jangan berulang):
-"tampaknya", "agaknya", "cenderung menunjukkan bahwa",
-"boleh jadi", "sejauh kajian ini menjangkau",
-"data mengisyaratkan", "pola ini mengarah pada",
-"tidak menutup kemungkinan bahwa"
-
-WAJIB DIGUNAKAN — OBSERVASI ANALITIS PERSONAL:
-Satu kalimat per paragraf yang menunjukkan penulis 
-sedang berpikir, bukan hanya melaporkan:
-Contoh: "Yang menarik dari pola ini adalah..."
-        "Paradoks ini layak mendapat perhatian lebih."
-        "Situasi ini mencerminkan tantangan yang lebih dalam."
-
-AKTIF vs PASIF: Variasikan — jangan semua pasif atau 
-semua aktif. Ganti setiap 2-3 kalimat.
-
-HINDARI: paragraf yang semua kalimatnya sama panjang,
-pembuka paragraf yang berurutan dengan kata yang sama,
-frasa yang terlalu sempurna dan terstruktur.
-"""
-
-    elif style_mode == "profesional":
-        register_rules = f"""
-## REGISTER: PROFESIONAL
-
-STRUKTUR PARAGRAF WAJIB (minimum {paragraph_count} paragraf):
-Setiap paragraf HARUS mengandung elemen ini:
-1. Kalimat pembuka yang langsung ke substansi (8-15 kata)
-2. Kalimat penjelas dengan data/fakta konkret (15-25 kata)
-3. Kalimat tegas dan pendek yang menunjukkan kepastian 
-   (4-8 kata): "Ini tidak bisa ditunda." / "Risikonya nyata."
-4. Kalimat elaborasi atau konteks (12-20 kata)
-5. Kalimat penutup yang actionable atau forward-looking
-
-WAJIB: Setiap paragraf harus punya minimal 1 angka, 
-nama spesifik, atau referensi konkret dari draf asli.
-
-WAJIB: Gunakan kalimat aktif yang tegas dan kuat.
-Contoh yang SALAH: "Hal tersebut perlu dipertimbangkan"
-Contoh yang BENAR: "Tim harus mempertimbangkan ini segera."
-
-VARIASI STRUKTUR: Jangan semua kalimat deklaratif. 
-Sesekali gunakan kalimat implikatif atau kondisional:
-"Jika ini dibiarkan...", "Tanpa intervensi segera..."
-
-HINDARI: kalimat pasif berlebihan, frasa pengantar 
-yang panjang sebelum inti informasi, eufemisme yang 
-tidak perlu.
-"""
-
-    elif style_mode == "kreatif":
-        register_rules = f"""
-## REGISTER: KREATIF
-
-STRUKTUR PARAGRAF (minimum {paragraph_count} paragraf):
-TIDAK ADA template. Tapi setiap paragraf wajib punya:
-- Minimal 1 kalimat sangat pendek (2-5 kata)
-- Minimal 1 kalimat sangat panjang (25-40 kata)
-- Minimal 1 elemen sensoris yang SPESIFIK dan tidak 
-  generik (bukan "harum bunga" tapi aroma apa tepatnya,
-  bukan "suara bising" tapi suara apa)
-
-WAJIB — IMPERFEKSI NATURAL:
-- Boleh ada kalimat yang pivot di tengah atau 
-  berubah arah: "Ia bermaksud pergi — tapi kemudian..."
-- Boleh ada kalimat fragment untuk efek dramatis: 
-  "Tidak ada yang menjawab. Sepi."
-- Pikiran yang tidak selesai sempurna: "Entah kenapa,"
-- Simile yang tidak terduga dan sedikit aneh
-
-WAJIB — SUDUT PANDANG:
-Selalu ada "suara" yang jelas — narator yang punya 
-perspektif, bukan reporter yang netral.
-
-DILARANG: deskripsi sensoris generik, narasi yang 
-terlalu smooth dan terkontrol, setiap paragraf 
-berstruktur sama.
-"""
-
-    else:  # populer
-        register_rules = f"""
-## REGISTER: POPULER
-
-STRUKTUR PARAGRAF WAJIB (minimum {paragraph_count} paragraf):
-Setiap paragraf HARUS:
-1. Dimulai dengan cara yang berbeda dari paragraf 
-   sebelumnya (jangan semua dengan kata penghubung)
-2. Punya minimal 1 kalimat yang terasa "berbicara 
-   langsung" ke pembaca
-3. Punya variasi panjang ekstrem:
-   - 1 kalimat pendek (3-6 kata): "Ini yang berbeda."
-   - 1 kalimat panjang mengalir (18-28 kata)
-   - Sisanya medium (8-15 kata)
-4. Minimum 4 kalimat per paragraf
-
-WAJIB — ELEMEN CONVERSATIONAL:
-Sisipkan salah satu per 2 paragraf:
-"Jujur saja,", "Kalau dipikir-pikir,", 
-"Yang bikin menarik,", "Memang tidak mudah,",
-"Tapi tunggu dulu —", "Faktanya justru sebaliknya."
-
-WAJIB — OPINI RINGAN:
-Satu kalimat per paragraf yang menunjukkan penulis 
-punya pendapat, bukan hanya melaporkan fakta.
-Contoh: "Dan menurut saya, inilah inti masalahnya."
-        "Pilihan ini lebih masuk akal daripada yang 
-         terlihat di permukaan."
-
-HINDARI: transisi yang terlalu formal, kalimat yang 
-semua sama panjang, tidak ada "suara" penulis.
-"""
-
-    return f"""
-## IDENTITAS & TUJUAN UTAMA
-Kamu penulis Indonesia berpengalaman. Tugas satu-satunya:
-tulis ulang draf agar TIDAK terdeteksi GPTZero dan Turnitin.
-
-## ATURAN BERPIKIR (CHAIN OF THOUGHT)
-Sebelum menulis ulang teks, kamu WAJIB merencanakan struktur tulisan di dalam tag `<thought> ... </thought>`. 
-Di dalam tag tersebut, rencanakan:
-1. Berapa paragraf yang akan ditulis (harus sama dengan draft asli).
-2. Bagaimana variasi panjang kalimat akan diterapkan di tiap paragraf.
-3. Transisi antar paragraf.
-Setelah tag `</thought>` ditutup, barulah kamu mencetak teks hasil rewrite.
-
-## ATURAN ABSOLUT — BACA INI DULU SEBELUM APAPUN
-
-ATURAN 1 — MINIMUM 4 KALIMAT PER PARAGRAF:
-Setiap paragraf WAJIB minimal 4 kalimat. Jika paragraf
-asli hanya 2-3 kalimat, perluas dengan kalimat analitis
-atau observasi yang memperkaya — tapi jangan tambah fakta baru.
-
-ATURAN 2 — VARIASI PANJANG EKSTREM DALAM TIAP PARAGRAF:
-Setiap paragraf WAJIB punya kombinasi:
-  • 1 kalimat sangat pendek (3-6 kata)
-  • 1 kalimat sangat panjang (25-35 kata)  
-  • Sisanya medium (10-18 kata)
-Ini adalah aturan paling penting untuk lolos deteksi AI.
-
-ATURAN 3 — KATA YANG DILARANG KERAS:
-Jangan gunakan dalam bentuk apapun:
-merupakan, memiliki, berbagai, sehingga, serta, tersebut,
-selain itu, oleh karena itu, dengan demikian, hal ini,
-dapat disimpulkan, secara keseluruhan, sangat penting,
-perlu dicatat, dalam hal ini, adapun, tentunya, pastinya,
-furthermore, moreover, additionally, utilize, leverage,
-it is important, in conclusion, notably, straightforward.
-
-ATURAN 4 — STRUKTUR PARAGRAF NON-TEMPLATE:
-JANGAN gunakan: topic sentence → penjelasan → contoh → kesimpulan.
-LAKUKAN: mulai dari perspektif/observasi, lalu bangun ke argumen,
-atau mulai dari contoh spesifik, lalu generalisasi.
-
-ATURAN 5 — OUTPUT HANYA TEKS:
-Langsung mulai kalimat pertama. Tidak ada penjelasan,
-tidak ada bullet points, tidak ada catatan perubahan.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{lang_instruction}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-{few_shot_text}
-
-{register_rules}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-## PENGINGAT AKHIR — SEBELUM KAMU MULAI MENULIS:
-1. Sudahkah kamu pastikan setiap paragraf ≥4 kalimat?
-2. Sudahkah setiap paragraf punya kalimat pendek (3-6 kata)?
-3. Sudahkah kamu hindari SEMUA kata di ATURAN 3?
-4. Apakah struktur paragrafmu NON-TEMPLATE?
-Jika jawabannya tidak, tulis ulang dulu sebelum submit.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
-
-
 
 def _programmatic_sentence_humanize(text: str, lang: str, style_mode: str = "populer") -> str:
     """Rule-based sentence transformation. No LLM — 100% reliable."""
@@ -419,7 +167,6 @@ def _programmatic_sentence_humanize(text: str, lang: str, style_mode: str = "pop
 
     return '\n'.join(result_paragraphs)
 
-
 def _inject_short_sentences(text: str, lang: str, style_mode: str = "populer") -> str:
     injects = {
         "akademik": {
@@ -469,7 +216,6 @@ def _inject_short_sentences(text: str, lang: str, style_mode: str = "populer") -
                 new_sentences.append(random.choice(short_list))
         result.append(' '.join(new_sentences))
     return '\n'.join(result)
-
 
 def _replace_preserve_case(text: str, pattern: str, replacement: str) -> str:
     """Replace pattern tapi preserve kapitalisasi kata pertama."""
@@ -708,10 +454,6 @@ def _apply_post_processing(text: str, lang: str, style_mode: str = "populer") ->
     
     return text.strip()
 
-
-# Set API key at module level
-os.environ["GROQ_API_KEY"] = settings.GROQ_API_KEY
-
 def check_trigram_overlap(original: str, rewritten: str) -> float:
     """
     Hitung persentase trigram (3 kata berurutan) yang sama
@@ -733,7 +475,6 @@ def check_trigram_overlap(original: str, rewritten: str) -> float:
 
     overlap = len(orig_trigrams & new_trigrams)
     return round(overlap / len(orig_trigrams), 3)
-
 
 def _needs_rewrite(overlap: float, threshold: float = 0.30) -> bool:
     """
@@ -811,7 +552,6 @@ def _strip_meta_commentary(text: str) -> str:
     
     result = '\n'.join(cleaned_lines).strip()
     return result if result else text
-
 
 def _validate_output_quality(
     text: str,
@@ -946,7 +686,6 @@ def _score_human_likelihood(
     score += variety_score * 0.10
 
     return round(score, 3)
-
 
 def _enforce_min_sentences(
     text: str,
@@ -1136,245 +875,3 @@ def _generate_changes_made(
 
     return changes
 
-
-async def apply_style_stream(
-    draft: str, style: StyleProfile
-) -> AsyncGenerator[str, None]:
-    clean_draft = _clean_input_draft(draft)
-    paragraph_count = _count_paragraphs(clean_draft)
-    
-    try:
-        input_lang = "id" if detect(clean_draft[:2000]) in ("id", "ms") else "en"
-    except Exception:
-        input_lang = "id"
-        
-    system_prompt = _build_system_prompt(style, paragraph_count)
-    style_mode = getattr(style, 'style_mode', 'populer')
-
-    drafter_agent = Agent(
-        model=FallbackModel(
-            "groq:llama-3.3-70b-versatile",
-            "groq:llama-3.1-8b-instant",
-        ),
-        system_prompt=system_prompt,
-    )
-
-    user_msg = (
-        f"Tulis ulang draf berikut agar terdengar natural, "
-        f"ditulis oleh manusia sungguhan. "
-        f"PENTING: setiap paragraf HARUS minimal 4 kalimat "
-        f"dengan variasi panjang yang ekstrem. "
-        f"Ikuti register dan gaya yang telah ditentukan. "
-        f"Kembalikan HANYA teks hasil rewrite — "
-        f"jangan tambahkan penjelasan, label, atau komentar (kecuali tag <thought> di awal). "
-        f"Output WAJIB persis {paragraph_count} paragraf "
-        f"dipisahkan baris kosong.\n\n"
-        f"{clean_draft}"
-    )
-
-    try:
-        result = await asyncio.wait_for(
-            drafter_agent.run(
-                user_msg,
-                model_settings={"temperature": 1.1},
-            ),
-            timeout=60.0
-        )
-        full_text = str(result.output).strip() if result.output else ""
-    except Exception as e:
-        full_text = ""
-
-    # Parse out <thought>
-    import re as re_mod
-    thought_match = re_mod.search(r'<thought>.*?</thought>', full_text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
-    thought_block = ""
-    if thought_match:
-        thought_block = thought_match.group(0)
-        full_text = full_text.replace(thought_block, "").strip()
-
-    full_text = _strip_meta_commentary(full_text)
-    trigram_overlap = check_trigram_overlap(clean_draft, full_text)
-    
-    # Send thought block to frontend quickly if exists
-    if thought_block:
-        yield f"event: text\ndata: {json.dumps(thought_block + '\n\n')}\n\n"
-        await asyncio.sleep(0.1)
-
-    # Pass 2: Structural Rewrite if Turnitin overlap > 30%
-    if trigram_overlap > 0.30:
-        yield f"event: text\ndata: {json.dumps('<!-- turnitin_refine -->\n')}\n\n"
-        pass2_msg = (
-            f"Teks ini masih terlalu mirip strukturnya dengan draf asli (Overlap {trigram_overlap*100:.0f}% > 30%).\n"
-            f"LAKUKAN STRUCTURAL REWRITE TOTAL: ubah urutan paragraf, gabungkan kalimat, "
-            f"atau pecah paragraf. Jangan hanya mengganti sinonim.\n"
-            f"Tulis perencanaanmu di dalam <thought> lalu hasil teks.\n"
-            f"Berikut adalah teks yang perlu dirombak total:\n\n{full_text}"
-        )
-        try:
-            result_pass2 = await asyncio.wait_for(
-                drafter_agent.run(
-                    pass2_msg,
-                    model_settings={"temperature": 1.2},
-                ),
-                timeout=60.0
-            )
-            pass2_text = str(result_pass2.output).strip() if result_pass2.output else ""
-            thought_match2 = re_mod.search(r'<thought>.*?</thought>', pass2_text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
-            if thought_match2:
-                thought_block2 = thought_match2.group(0)
-                yield f"event: text\ndata: {json.dumps(thought_block2 + '\n\n')}\n\n"
-                pass2_text = pass2_text.replace(thought_block2, "").strip()
-            full_text = _strip_meta_commentary(pass2_text)
-            trigram_overlap = check_trigram_overlap(clean_draft, full_text)
-        except Exception:
-            pass
-
-    # Pass 3: Editor Agent for Polishing (Streaming)
-    editor_agent = Agent(
-        model="groq:llama-3.1-8b-instant",
-        system_prompt=(
-            "Tugasmu HANYA SATU: membersihkan teks dari sisa-sisa gaya AI dan memastikan "
-            "tata bahasa (EYD) sempurna. DILARANG KERAS mengubah makna, menambah informasi baru, "
-            "atau merusak jumlah paragraf. Hapus transisi kaku seperti 'Oleh karena itu', "
-            "'Selain itu', 'Hal ini menunjukkan', 'Dengan demikian', dll. Ganti dengan kata santai "
-            "atau hilangkan sama sekali.\n"
-            "Langsung berikan teks akhir tanpa <thought> dan tanpa komentar."
-        )
-    )
-
-    try:
-        async with editor_agent.run_stream(
-            full_text,
-            model_settings={"temperature": 0.5},
-        ) as editor_stream:
-            final_polished_text = ""
-            async for chunk in editor_stream.stream():
-                yield f"event: text\ndata: {json.dumps(chunk)}\n\n"
-                final_polished_text += chunk
-            full_text = final_polished_text
-    except Exception:
-        # Fallback to yielding synchronously if stream fails
-        chunk_size = 10
-        for i in range(0, len(full_text), chunk_size):
-            chunk = full_text[i:i+chunk_size]
-            yield f"event: text\ndata: {json.dumps(chunk)}\n\n"
-            await asyncio.sleep(0.01)
-        
-    full_text = _validate_paragraph_count(full_text, paragraph_count, clean_draft)
-    full_text = _enforce_min_sentences(full_text, min_sentences=4)
-
-    final_trigram_overlap = check_trigram_overlap(clean_draft, full_text)
-    changes = _generate_changes_made(clean_draft, full_text, final_trigram_overlap)
-    yield f"event: metrics\ndata: {json.dumps({'changes_made': changes})}\n\n"
-
-
-async def apply_style(
-    draft: str, style: StyleProfile
-) -> ProcessedText:
-    clean_draft = _clean_input_draft(draft)
-    paragraph_count = _count_paragraphs(clean_draft)
-    
-    try:
-        input_lang = "id" if detect(clean_draft[:2000]) in ("id", "ms") else "en"
-    except Exception:
-        input_lang = "id"
-        
-    system_prompt = _build_system_prompt(style, paragraph_count)
-    style_mode = getattr(style, 'style_mode', 'populer')
-
-    drafter_agent = Agent(
-        model=FallbackModel(
-            "groq:llama-3.3-70b-versatile",
-            "groq:llama-3.1-8b-instant",
-        ),
-        system_prompt=system_prompt,
-    )
-
-    user_msg = (
-        f"Tulis ulang draf berikut agar terdengar natural, "
-        f"ditulis oleh manusia sungguhan. "
-        f"PENTING: setiap paragraf HARUS minimal 4 kalimat "
-        f"dengan variasi panjang yang ekstrem. "
-        f"Ikuti register dan gaya yang telah ditentukan. "
-        f"Kembalikan HANYA teks hasil rewrite — "
-        f"jangan tambahkan penjelasan, label, atau komentar (kecuali tag <thought> di awal). "
-        f"Output WAJIB persis {paragraph_count} paragraf "
-        f"dipisahkan baris kosong.\n\n"
-        f"{clean_draft}"
-    )
-
-    try:
-        result = await asyncio.wait_for(
-            drafter_agent.run(
-                user_msg,
-                model_settings={"temperature": 1.1},
-            ),
-            timeout=60.0
-        )
-        full_text = str(result.output).strip() if result.output else ""
-    except Exception:
-        full_text = draft
-
-    import re as re_mod
-    thought_match = re_mod.search(r'<thought>.*?</thought>', full_text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
-    if thought_match:
-        thought_block = thought_match.group(0)
-        full_text = full_text.replace(thought_block, "").strip()
-
-    full_text = _strip_meta_commentary(full_text)
-    trigram_overlap = check_trigram_overlap(clean_draft, full_text)
-    
-    if trigram_overlap > 0.30:
-        pass2_msg = (
-            f"Teks ini masih terlalu mirip strukturnya dengan draf asli (Overlap {trigram_overlap*100:.0f}% > 30%).\n"
-            f"LAKUKAN STRUCTURAL REWRITE TOTAL: ubah urutan paragraf, gabungkan kalimat, "
-            f"atau pecah paragraf. Jangan hanya mengganti sinonim.\n"
-            f"Tulis perencanaanmu di dalam <thought> lalu hasil teks.\n"
-            f"Berikut adalah teks yang perlu dirombak total:\n\n{full_text}"
-        )
-        try:
-            result_pass2 = await asyncio.wait_for(
-                drafter_agent.run(
-                    pass2_msg,
-                    model_settings={"temperature": 1.2},
-                ),
-                timeout=60.0
-            )
-            pass2_text = str(result_pass2.output).strip() if result_pass2.output else ""
-            thought_match2 = re_mod.search(r'<thought>.*?</thought>', pass2_text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
-            if thought_match2:
-                pass2_text = pass2_text.replace(thought_match2.group(0), "").strip()
-            full_text = _strip_meta_commentary(pass2_text)
-        except Exception:
-            pass
-
-    editor_agent = Agent(
-        model="groq:llama-3.1-8b-instant",
-        system_prompt=(
-            "Tugasmu HANYA SATU: membersihkan teks dari sisa-sisa gaya AI dan memastikan "
-            "tata bahasa (EYD) sempurna. DILARANG KERAS mengubah makna, menambah informasi baru, "
-            "atau merusak jumlah paragraf. Hapus transisi kaku seperti 'Oleh karena itu', "
-            "'Selain itu', 'Hal ini menunjukkan', 'Dengan demikian', dll. Ganti dengan kata santai "
-            "atau hilangkan sama sekali.\n"
-            "Langsung berikan teks akhir tanpa <thought> dan tanpa komentar."
-        )
-    )
-
-    try:
-        result_editor = await asyncio.wait_for(
-            editor_agent.run(
-                full_text,
-                model_settings={"temperature": 0.5},
-            ),
-            timeout=30.0
-        )
-        full_text = str(result_editor.output).strip() if result_editor.output else full_text
-    except Exception:
-        pass
-        
-    full_text = _validate_paragraph_count(full_text, paragraph_count, clean_draft)
-    full_text = _enforce_min_sentences(full_text, min_sentences=4)
-
-    final_trigram_overlap = check_trigram_overlap(clean_draft, full_text)
-    changes = _generate_changes_made(clean_draft, full_text, final_trigram_overlap)
-    return ProcessedText(final_text=full_text, changes_made=changes)
