@@ -179,8 +179,9 @@ def get_global_style() -> dict:
         pass
     return {}
 
-def process_stream(response):
+def process_stream(response, thought_placeholder=None, info_placeholder=None):
     """Generator to process the SSE streaming response from the backend."""
+    import streamlit as st
     current_event = None
     for line in response.iter_lines(decode_unicode=True):
         if not line:
@@ -193,6 +194,15 @@ def process_stream(response):
             if current_event == "text":
                 try:
                     chunk = json.loads(data_str)
+                    if "<!-- turnitin_refine -->" in chunk:
+                        if info_placeholder:
+                            info_placeholder.info("🔄 Overlap struktural Turnitin tinggi (> 30%). Memulai Pass-2 (Perombakan Struktural)...")
+                        continue
+                    if "<thought>" in chunk:
+                        if thought_placeholder:
+                            with thought_placeholder.expander("🤔 Agent's Chain of Thought (Perencanaan)", expanded=False):
+                                st.markdown(f"```text\n{chunk.replace('<thought>', '').replace('</thought>', '').strip()}\n```")
+                        continue
                     yield chunk
                 except Exception:
                     pass
@@ -331,11 +341,12 @@ with tab1:
                 st.markdown("### ✅ Hasil Humanize")
                 st.session_state["last_metrics"] = None
                 
-                # Create a placeholder for the streamed text
+                info_placeholder = st.empty()
+                thought_placeholder = st.empty()
                 text_placeholder = st.empty()
                 
                 # Consume the stream
-                final_text = text_placeholder.write_stream(process_stream(process_resp))
+                final_text = text_placeholder.write_stream(process_stream(process_resp, thought_placeholder, info_placeholder))
                 
                 st.session_state["last_result"] = final_text
                 st.session_state["last_draft"] = draft_text
@@ -522,23 +533,46 @@ with tab1:
 
 # ── Tab 2: History ────────────────────────────────────────────────────────────
 with tab2:
-    st.markdown("### 📜 Riwayat Evaluasi")
-    st.caption("Daftar lengkap hasil proses dan evaluasi yang pernah dijalankan.")
+    st.markdown("### 📜 Dasbor & Riwayat Evaluasi")
+    st.caption("Analitik performa HumanWrite AI dan daftar historis evaluasi.")
     
-    if st.button("🔄 Segarkan Data Riwayat"):
+    if st.button("🔄 Segarkan Data & Dasbor"):
         try:
             resp = requests.get(f"{BACKEND_URL}/api/v1/evaluate/history")
             if resp.status_code == 200:
                 history_data = resp.json().get("data", [])
                 if history_data:
-                    # Clean up data for dataframe
                     df = pd.DataFrame(history_data)
-                    cols_to_show = ["id", "timestamp", "style_mode", "judge_score_standard", "enhanced_judge_score", "gptzero_std_human", "gptzero_enh_human", "trigram_overlap"]
+                    
+                    # Dashboard Analytics
+                    st.markdown("#### 📈 Tren Skor GPTZero (Human %)")
+                    if "gptzero_enh_human" in df.columns:
+                        chart_data = df[df["gptzero_enh_human"].notna()].sort_values("id")
+                        if not chart_data.empty:
+                            st.line_chart(chart_data.set_index("id")["gptzero_enh_human"], color="#3fb950")
+                        else:
+                            st.caption("Belum ada data GPTZero manual.")
+
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        if "trigram_overlap" in df.columns:
+                            avg_overlap = df["trigram_overlap"].mean() * 100
+                            st.metric("Rata-rata Turnitin Overlap", f"{avg_overlap:.1f}%")
+                    with col2:
+                        if "enhanced_judge_score" in df.columns:
+                            avg_score = df["enhanced_judge_score"].mean()
+                            st.metric("Rata-rata Skor LLM Judge", f"{avg_score:.1f}/100")
+                    with col3:
+                        st.metric("Total Dokumen", f"{len(df)}")
+                        
+                    st.markdown("---")
+                    st.markdown("#### Tabel Riwayat Detail")
+                    cols_to_show = ["id", "timestamp", "style_mode", "enhanced_judge_score", "gptzero_enh_human", "trigram_overlap"]
                     existing_cols = [c for c in cols_to_show if c in df.columns]
-                    st.dataframe(df[existing_cols].sort_values(by="id", ascending=False))
+                    st.dataframe(df[existing_cols].sort_values(by="id", ascending=False), use_container_width=True)
                 else:
                     st.info("Belum ada data evaluasi di database.")
         except Exception as e:
             st.error(f"Gagal mengambil riwayat: {e}")
     else:
-        st.info("Klik tombol di atas untuk memuat riwayat terbaru dari database.")
+        st.info("Klik tombol di atas untuk memuat dasbor dan riwayat terbaru.")

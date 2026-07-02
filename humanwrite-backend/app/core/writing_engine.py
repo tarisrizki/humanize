@@ -214,6 +214,14 @@ semua sama panjang, tidak ada "suara" penulis.
 Kamu penulis Indonesia berpengalaman. Tugas satu-satunya:
 tulis ulang draf agar TIDAK terdeteksi GPTZero dan Turnitin.
 
+## ATURAN BERPIKIR (CHAIN OF THOUGHT)
+Sebelum menulis ulang teks, kamu WAJIB merencanakan struktur tulisan di dalam tag `<thought> ... </thought>`. 
+Di dalam tag tersebut, rencanakan:
+1. Berapa paragraf yang akan ditulis (harus sama dengan draft asli).
+2. Bagaimana variasi panjang kalimat akan diterapkan di tiap paragraf.
+3. Transisi antar paragraf.
+Setelah tag `</thought>` ditutup, barulah kamu mencetak teks hasil rewrite.
+
 ## ATURAN ABSOLUT — BACA INI DULU SEBELUM APAPUN
 
 ATURAN 1 — MINIMUM 4 KALIMAT PER PARAGRAF:
@@ -872,6 +880,74 @@ def _validate_output_quality(
 
     return True
 
+def _score_human_likelihood(
+    text: str,
+    original: str,
+    lang: str = "id",
+) -> float:
+    """
+    Hitung estimasi "human-likeness" dari output.
+    Semakin tinggi = semakin human.
+    Skala 0.0 - 1.0
+    """
+    score = 0.0
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    sentences = [s for s in sentences if len(s.split()) > 2]
+
+    if not sentences:
+        return 0.0
+
+    # 1. BURSTINESS (bobot 35%)
+    # Variasi panjang kalimat — semakin bervariasi semakin human
+    lengths = [len(s.split()) for s in sentences]
+    if len(lengths) > 1:
+        mean_len = sum(lengths) / len(lengths)
+        variance = sum((l - mean_len) ** 2 for l in lengths) / len(lengths)
+        std_dev = variance ** 0.5
+        # Normalize: std_dev ideal untuk human ~5-12
+        burstiness_score = min(std_dev / 10.0, 1.0)
+        score += burstiness_score * 0.35
+
+    # 2. TRIGRAM NOVELTY (bobot 30%)
+    # Semakin sedikit overlap dengan original = semakin novel
+    trigram_overlap = check_trigram_overlap(original, text)
+    novelty_score = 1.0 - trigram_overlap
+    score += novelty_score * 0.30
+
+    # 3. BLACKLIST ABSENCE (bobot 25%)
+    # Semakin sedikit kata AI = semakin human
+    if lang in ("id", "mixed"):
+        ai_words = [
+            "merupakan", "memiliki", "berbagai", "sehingga",
+            "serta", "tersebut", "selain itu", "oleh karena itu",
+            "dengan demikian", "dapat disimpulkan",
+            "secara keseluruhan", "sangat penting",
+            "perlu dicatat", "dalam hal ini", "adapun",
+            "tentunya", "pastinya", "hal ini menunjukkan",
+        ]
+    else:
+        ai_words = [
+            "furthermore", "moreover", "additionally",
+            "consequently", "in conclusion", "it is important",
+            "notably", "utilize", "leverage",
+        ]
+
+    text_lower = text.lower()
+    ai_count = sum(1 for w in ai_words if w in text_lower)
+    # Penalti per kata blacklist yang tersisa
+    blacklist_score = max(0.0, 1.0 - (ai_count * 0.15))
+    score += blacklist_score * 0.25
+
+    # 4. SENTENCE VARIETY (bobot 10%)
+    # Apakah ada kalimat sangat pendek DAN sangat panjang?
+    has_short = any(len(s.split()) <= 7 for s in sentences)
+    has_long  = any(len(s.split()) >= 20 for s in sentences)
+    variety_score = 1.0 if (has_short and has_long) else 0.4
+    score += variety_score * 0.10
+
+    return round(score, 3)
+
+
 def _enforce_min_sentences(
     text: str,
     min_sentences: int = 4,
@@ -1075,15 +1151,12 @@ async def apply_style_stream(
     system_prompt = _build_system_prompt(style, paragraph_count)
     style_mode = getattr(style, 'style_mode', 'populer')
 
-    # Plain text agent — TANPA output_type
-    # Ini membebaskan Groq menulis prose alami tanpa constraint JSON
-    agent = Agent(
+    drafter_agent = Agent(
         model=FallbackModel(
             "groq:llama-3.3-70b-versatile",
             "groq:llama-3.1-8b-instant",
         ),
         system_prompt=system_prompt,
-        # TIDAK ADA output_type=ProcessedText
     )
 
     user_msg = (
@@ -1093,7 +1166,7 @@ async def apply_style_stream(
         f"dengan variasi panjang yang ekstrem. "
         f"Ikuti register dan gaya yang telah ditentukan. "
         f"Kembalikan HANYA teks hasil rewrite — "
-        f"jangan tambahkan penjelasan, label, atau komentar. "
+        f"jangan tambahkan penjelasan, label, atau komentar (kecuali tag <thought> di awal). "
         f"Output WAJIB persis {paragraph_count} paragraf "
         f"dipisahkan baris kosong.\n\n"
         f"{clean_draft}"
@@ -1101,9 +1174,9 @@ async def apply_style_stream(
 
     try:
         result = await asyncio.wait_for(
-            agent.run(
+            drafter_agent.run(
                 user_msg,
-                model_settings={"temperature": 1.2},
+                model_settings={"temperature": 1.1},
             ),
             timeout=60.0
         )
@@ -1111,92 +1184,87 @@ async def apply_style_stream(
     except Exception as e:
         full_text = ""
 
-    # Bersihkan meta-commentary sebelum validasi
+    # Parse out <thought>
+    import re as re_mod
+    thought_match = re_mod.search(r'<thought>.*?</thought>', full_text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
+    thought_block = ""
+    if thought_match:
+        thought_block = thought_match.group(0)
+        full_text = full_text.replace(thought_block, "").strip()
+
     full_text = _strip_meta_commentary(full_text)
+    trigram_overlap = check_trigram_overlap(clean_draft, full_text)
+    
+    # Send thought block to frontend quickly if exists
+    if thought_block:
+        yield f"event: text\ndata: {json.dumps(thought_block + '\n\n')}\n\n"
+        await asyncio.sleep(0.1)
 
-    # Validasi output Groq sebelum post-processing
-    if not _validate_output_quality(full_text, clean_draft):
-        # Output tidak layak — retry dengan temperature lebih rendah
-        try:
-            result_retry = await asyncio.wait_for(
-                agent.run(
-                    user_msg,
-                    model_settings={"temperature": 0.8},
-                ),
-                timeout=60.0
-            )
-            retry_text = str(result_retry.output).strip() if result_retry.output else ""
-            retry_text = _strip_meta_commentary(retry_text)
-            if _validate_output_quality(retry_text, clean_draft):
-                full_text = retry_text
-            else:
-                pass
-        except Exception:
-            pass
-
-    if not full_text:
-        return
-
-    # Post-processing pipeline
-    text = _apply_post_processing(full_text, style.language, style_mode)
-    text = _inject_short_sentences(text, style.language, style_mode)
-    text = _programmatic_sentence_humanize(text, style.language, style_mode)
-    text = _apply_post_processing(text, style.language, style_mode)
-    text = _validate_paragraph_count(text, paragraph_count, clean_draft)
-    text = _enforce_min_sentences(text, min_sentences=4)
-
-    # ── Trigram check — Pass 2 jika overlap terlalu tinggi ───
-    trigram_overlap = check_trigram_overlap(clean_draft, text)
-
-    if _needs_rewrite(trigram_overlap, threshold=0.30):
-        # Overlap terlalu tinggi → minta Groq rewrite lagi
-        # dengan instruksi structural yang lebih agresif
+    # Pass 2: Structural Rewrite if Turnitin overlap > 30%
+    if trigram_overlap > 0.30:
+        yield f"event: text\ndata: {json.dumps('<!-- turnitin_refine -->\n')}\n\n"
         pass2_msg = (
-            f"TUGAS: Tulis ulang teks berikut.\n"
-            f"ATURAN MUTLAK:\n"
-            f"- Output HANYA teks yang sudah diubah\n"
-            f"- DILARANG menulis penjelasan, catatan, "
-            f"  atau daftar perubahan apapun\n"
-            f"- DILARANG menulis kalimat seperti "
-            f"  'berikut teks ulang' atau 'perubahan yang dilakukan'\n"
-            f"- Langsung mulai dengan kalimat pertama teks\n\n"
-            f"FOKUS: Ubah struktur kalimat secara fundamental. "
-            f"Tidak boleh ada 3 kata berurutan yang sama. "
-            f"Pertahankan {paragraph_count} paragraf.\n\n"
-            f"TEKS YANG HARUS DITULIS ULANG:\n{text}"
+            f"Teks ini masih terlalu mirip strukturnya dengan draf asli (Overlap {trigram_overlap*100:.0f}% > 30%).\n"
+            f"LAKUKAN STRUCTURAL REWRITE TOTAL: ubah urutan paragraf, gabungkan kalimat, "
+            f"atau pecah paragraf. Jangan hanya mengganti sinonim.\n"
+            f"Tulis perencanaanmu di dalam <thought> lalu hasil teks.\n"
+            f"Berikut adalah teks yang perlu dirombak total:\n\n{full_text}"
         )
         try:
-            result2 = await asyncio.wait_for(
-                agent.run(
+            result_pass2 = await asyncio.wait_for(
+                drafter_agent.run(
                     pass2_msg,
                     model_settings={"temperature": 1.2},
                 ),
                 timeout=60.0
             )
-            text2 = str(result2.output).strip() if result2.output else ""
-            text2 = _strip_meta_commentary(text2)
-            if text2:
-                text2 = _apply_post_processing(text2, style.language, style_mode)
-                text2 = _programmatic_sentence_humanize(text2, style.language, style_mode)
-                text2 = _validate_paragraph_count(text2, paragraph_count, clean_draft)
-                text2 = _enforce_min_sentences(text2, min_sentences=4)
-                # Hanya pakai Pass 2 jika overlap-nya lebih kecil
-                new_overlap = check_trigram_overlap(clean_draft, text2)
-                if new_overlap < trigram_overlap:
-                    text = text2
-                    trigram_overlap = new_overlap
+            pass2_text = str(result_pass2.output).strip() if result_pass2.output else ""
+            thought_match2 = re_mod.search(r'<thought>.*?</thought>', pass2_text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
+            if thought_match2:
+                thought_block2 = thought_match2.group(0)
+                yield f"event: text\ndata: {json.dumps(thought_block2 + '\n\n')}\n\n"
+                pass2_text = pass2_text.replace(thought_block2, "").strip()
+            full_text = _strip_meta_commentary(pass2_text)
+            trigram_overlap = check_trigram_overlap(clean_draft, full_text)
         except Exception:
-            pass  # Tetap pakai Pass 1 jika Pass 2 gagal
+            pass
 
-    # Simulated streaming
-    chunk_size = 10
-    for i in range(0, len(text), chunk_size):
-        chunk = text[i:i+chunk_size]
-        yield f"event: text\ndata: {json.dumps(chunk)}\n\n"
-        await asyncio.sleep(0.01)
+    # Pass 3: Editor Agent for Polishing (Streaming)
+    editor_agent = Agent(
+        model="groq:llama-3.1-8b-instant",
+        system_prompt=(
+            "Tugasmu HANYA SATU: membersihkan teks dari sisa-sisa gaya AI dan memastikan "
+            "tata bahasa (EYD) sempurna. DILARANG KERAS mengubah makna, menambah informasi baru, "
+            "atau merusak jumlah paragraf. Hapus transisi kaku seperti 'Oleh karena itu', "
+            "'Selain itu', 'Hal ini menunjukkan', 'Dengan demikian', dll. Ganti dengan kata santai "
+            "atau hilangkan sama sekali.\n"
+            "Langsung berikan teks akhir tanpa <thought> dan tanpa komentar."
+        )
+    )
 
-    # Changes programmatic — tidak dari LLM
-    changes = _generate_changes_made(clean_draft, text, trigram_overlap)
+    try:
+        async with editor_agent.run_stream(
+            full_text,
+            model_settings={"temperature": 0.5},
+        ) as editor_stream:
+            final_polished_text = ""
+            async for chunk in editor_stream.stream():
+                yield f"event: text\ndata: {json.dumps(chunk)}\n\n"
+                final_polished_text += chunk
+            full_text = final_polished_text
+    except Exception:
+        # Fallback to yielding synchronously if stream fails
+        chunk_size = 10
+        for i in range(0, len(full_text), chunk_size):
+            chunk = full_text[i:i+chunk_size]
+            yield f"event: text\ndata: {json.dumps(chunk)}\n\n"
+            await asyncio.sleep(0.01)
+        
+    full_text = _validate_paragraph_count(full_text, paragraph_count, clean_draft)
+    full_text = _enforce_min_sentences(full_text, min_sentences=4)
+
+    final_trigram_overlap = check_trigram_overlap(clean_draft, full_text)
+    changes = _generate_changes_made(clean_draft, full_text, final_trigram_overlap)
     yield f"event: metrics\ndata: {json.dumps({'changes_made': changes})}\n\n"
 
 
@@ -1214,13 +1282,12 @@ async def apply_style(
     system_prompt = _build_system_prompt(style, paragraph_count)
     style_mode = getattr(style, 'style_mode', 'populer')
 
-    agent = Agent(
+    drafter_agent = Agent(
         model=FallbackModel(
             "groq:llama-3.3-70b-versatile",
             "groq:llama-3.1-8b-instant",
         ),
         system_prompt=system_prompt,
-        # TIDAK ADA output_type=ProcessedText
     )
 
     user_msg = (
@@ -1230,7 +1297,7 @@ async def apply_style(
         f"dengan variasi panjang yang ekstrem. "
         f"Ikuti register dan gaya yang telah ditentukan. "
         f"Kembalikan HANYA teks hasil rewrite — "
-        f"jangan tambahkan penjelasan, label, atau komentar. "
+        f"jangan tambahkan penjelasan, label, atau komentar (kecuali tag <thought> di awal). "
         f"Output WAJIB persis {paragraph_count} paragraf "
         f"dipisahkan baris kosong.\n\n"
         f"{clean_draft}"
@@ -1238,85 +1305,76 @@ async def apply_style(
 
     try:
         result = await asyncio.wait_for(
-            agent.run(
+            drafter_agent.run(
                 user_msg,
-                model_settings={"temperature": 1.2},
+                model_settings={"temperature": 1.1},
             ),
             timeout=60.0
         )
         full_text = str(result.output).strip() if result.output else ""
     except Exception:
-        full_text = draft  # fallback ke draf asli
+        full_text = draft
 
-    # Bersihkan meta-commentary sebelum validasi
+    import re as re_mod
+    thought_match = re_mod.search(r'<thought>.*?</thought>', full_text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
+    if thought_match:
+        thought_block = thought_match.group(0)
+        full_text = full_text.replace(thought_block, "").strip()
+
     full_text = _strip_meta_commentary(full_text)
-
-    # Validasi output Groq sebelum post-processing
-    if not _validate_output_quality(full_text, clean_draft):
-        # Output tidak layak — retry dengan temperature lebih rendah
-        try:
-            result_retry = await asyncio.wait_for(
-                agent.run(
-                    user_msg,
-                    model_settings={"temperature": 0.8},
-                ),
-                timeout=60.0
-            )
-            retry_text = str(result_retry.output).strip() if result_retry.output else ""
-            retry_text = _strip_meta_commentary(retry_text)
-            if _validate_output_quality(retry_text, clean_draft):
-                full_text = retry_text
-            else:
-                pass
-        except Exception:
-            pass
-
-    text = _apply_post_processing(full_text, style.language, style_mode)
-    text = _inject_short_sentences(text, style.language, style_mode)
-    text = _programmatic_sentence_humanize(text, style.language, style_mode)
-    text = _apply_post_processing(text, style.language, style_mode)
-    text = _validate_paragraph_count(text, paragraph_count, clean_draft)
-    text = _enforce_min_sentences(text, min_sentences=4)
-
-    # ── Trigram check — Pass 2 jika overlap terlalu tinggi ───
-    trigram_overlap = check_trigram_overlap(clean_draft, text)
-
-    if _needs_rewrite(trigram_overlap, threshold=0.30):
+    trigram_overlap = check_trigram_overlap(clean_draft, full_text)
+    
+    if trigram_overlap > 0.30:
         pass2_msg = (
-            f"TUGAS: Tulis ulang teks berikut.\n"
-            f"ATURAN MUTLAK:\n"
-            f"- Output HANYA teks yang sudah diubah\n"
-            f"- DILARANG menulis penjelasan, catatan, "
-            f"  atau daftar perubahan apapun\n"
-            f"- DILARANG menulis kalimat seperti "
-            f"  'berikut teks ulang' atau 'perubahan yang dilakukan'\n"
-            f"- Langsung mulai dengan kalimat pertama teks\n\n"
-            f"FOKUS: Ubah struktur kalimat secara fundamental. "
-            f"Tidak boleh ada 3 kata berurutan yang sama. "
-            f"Pertahankan {paragraph_count} paragraf.\n\n"
-            f"TEKS YANG HARUS DITULIS ULANG:\n{text}"
+            f"Teks ini masih terlalu mirip strukturnya dengan draf asli (Overlap {trigram_overlap*100:.0f}% > 30%).\n"
+            f"LAKUKAN STRUCTURAL REWRITE TOTAL: ubah urutan paragraf, gabungkan kalimat, "
+            f"atau pecah paragraf. Jangan hanya mengganti sinonim.\n"
+            f"Tulis perencanaanmu di dalam <thought> lalu hasil teks.\n"
+            f"Berikut adalah teks yang perlu dirombak total:\n\n{full_text}"
         )
         try:
-            result2 = await asyncio.wait_for(
-                agent.run(
+            result_pass2 = await asyncio.wait_for(
+                drafter_agent.run(
                     pass2_msg,
                     model_settings={"temperature": 1.2},
                 ),
                 timeout=60.0
             )
-            text2 = str(result2.output).strip() if result2.output else ""
-            text2 = _strip_meta_commentary(text2)
-            if text2:
-                text2 = _apply_post_processing(text2, style.language, style_mode)
-                text2 = _programmatic_sentence_humanize(text2, style.language, style_mode)
-                text2 = _validate_paragraph_count(text2, paragraph_count, clean_draft)
-                text2 = _enforce_min_sentences(text2, min_sentences=4)
-                new_overlap = check_trigram_overlap(clean_draft, text2)
-                if new_overlap < trigram_overlap:
-                    text = text2
-                    trigram_overlap = new_overlap
+            pass2_text = str(result_pass2.output).strip() if result_pass2.output else ""
+            thought_match2 = re_mod.search(r'<thought>.*?</thought>', pass2_text, flags=re_mod.DOTALL | re_mod.IGNORECASE)
+            if thought_match2:
+                pass2_text = pass2_text.replace(thought_match2.group(0), "").strip()
+            full_text = _strip_meta_commentary(pass2_text)
         except Exception:
             pass
 
-    changes = _generate_changes_made(clean_draft, text, trigram_overlap)
-    return ProcessedText(final_text=text, changes_made=changes)
+    editor_agent = Agent(
+        model="groq:llama-3.1-8b-instant",
+        system_prompt=(
+            "Tugasmu HANYA SATU: membersihkan teks dari sisa-sisa gaya AI dan memastikan "
+            "tata bahasa (EYD) sempurna. DILARANG KERAS mengubah makna, menambah informasi baru, "
+            "atau merusak jumlah paragraf. Hapus transisi kaku seperti 'Oleh karena itu', "
+            "'Selain itu', 'Hal ini menunjukkan', 'Dengan demikian', dll. Ganti dengan kata santai "
+            "atau hilangkan sama sekali.\n"
+            "Langsung berikan teks akhir tanpa <thought> dan tanpa komentar."
+        )
+    )
+
+    try:
+        result_editor = await asyncio.wait_for(
+            editor_agent.run(
+                full_text,
+                model_settings={"temperature": 0.5},
+            ),
+            timeout=30.0
+        )
+        full_text = str(result_editor.output).strip() if result_editor.output else full_text
+    except Exception:
+        pass
+        
+    full_text = _validate_paragraph_count(full_text, paragraph_count, clean_draft)
+    full_text = _enforce_min_sentences(full_text, min_sentences=4)
+
+    final_trigram_overlap = check_trigram_overlap(clean_draft, full_text)
+    changes = _generate_changes_made(clean_draft, full_text, final_trigram_overlap)
+    return ProcessedText(final_text=full_text, changes_made=changes)
